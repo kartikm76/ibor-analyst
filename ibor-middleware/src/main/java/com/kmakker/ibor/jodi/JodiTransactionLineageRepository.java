@@ -62,7 +62,7 @@ public class JodiTransactionLineageRepository {
                      LIMIT 1
                   ),
                   i AS (
-                    SELECT di.instrument_vid, di.instrument_code, di.instrument_type, di.currency_code
+                    SELECT di.instrument_vid, di.instrument_code, di.instrument_name, di.instrument_type, di.currency_code
                       FROM ibor.dim_instrument di, args
                      WHERE di.instrument_code = args.instrument_code
                        AND di.valid_from <= args.as_of AND di.valid_to >= args.as_of
@@ -103,6 +103,7 @@ public class JodiTransactionLineageRepository {
                     args.as_of AS as_of,
                     (SELECT portfolio_code FROM p) AS portfolio_code,
                     (SELECT instrument_code FROM i) AS instrument_code,
+                    (SELECT instrument_name FROM i) AS instrument_name,
                     (SELECT instrument_type FROM i) AS instrument_type,
                     (COALESCE((SELECT qty FROM pos),0) + (SELECT qty_adj FROM adj))::numeric AS net_qty,
                     (SELECT price FROM price_pick) AS price,
@@ -126,6 +127,7 @@ public class JodiTransactionLineageRepository {
                 result.get("as_of", LocalDate.class),
                 result.get("portfolio_code", String.class),
                 result.get("instrument_code", String.class),
+                result.get("instrument_name", String.class),
                 result.get("instrument_type", String.class),
                 result.get("net_qty", BigDecimal.class),
                 result.get("price", BigDecimal.class),

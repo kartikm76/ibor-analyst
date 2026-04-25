@@ -13,6 +13,7 @@ from ai_gateway.config.db import PgPool, PgPoolConfig
 from ai_gateway.repository.ibor_repository import IborRepository
 from ai_gateway.service.ibor_service import IborService
 from ai_gateway.service.llm_service import LlmService
+from ai_gateway.service.instrument_resolver import InstrumentResolver
 from ai_gateway.service.market_tools import MarketTools
 from ai_gateway.service.conversation_service import ConversationService
 from ai_gateway.service.quota_service import QuotaService
@@ -26,8 +27,13 @@ from ai_gateway.infra.security_middleware import SecurityMiddleware, InputValida
 
 
 def create_app() -> FastAPI:
-    if not settings.anthropic_api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY is not configured. Check ai-gateway/.env.")
+    _key = settings.anthropic_api_key
+    if not _key or "placeholder" in _key or _key.endswith("..."):
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY is missing or still set to a placeholder. "
+            "Set a real key in ibor-ai-gateway/.env (local dev) or in the "
+            "repo-root .env (Docker: docker-compose reads it for ANTHROPIC_API_KEY)."
+        )
 
     # Initialize repositories and services
     ibor_repository = IborRepository(base_url=settings.structured_api_base)
@@ -41,10 +47,12 @@ def create_app() -> FastAPI:
     pg_pool = PgPool(pg_config)
     conversation_service = ConversationService(pg_pool, anthropic_client, embedding_provider)
 
+    instrument_resolver = InstrumentResolver(pg_pool)
     llm_service = LlmService(
         anthropic_client=anthropic_client,
         service=service,
         market_tools=market_tools,
+        resolver=instrument_resolver,
         model=settings.anthropic_model,
     )
 
@@ -65,6 +73,7 @@ def create_app() -> FastAPI:
         pg_pool.close()
 
     app = FastAPI(title="IBOR AI Gateway", version="0.2.0", lifespan=lifespan)
+    app.state.pg_pool = pg_pool
 
     # Security middlewares (added in reverse order — they execute top-to-bottom)
     app.add_middleware(QuotaCheckMiddleware)

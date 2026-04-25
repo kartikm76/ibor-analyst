@@ -1,3 +1,6 @@
+# Test overlay — activated automatically during JUnit/Spring test runs.
+# Uses random port and disables schema migrations; tests manage their own DB state.
+
 spring:
   jooq:
     sql-dialect: POSTGRES

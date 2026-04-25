@@ -9,11 +9,12 @@
 *.log
 
 # Virtual environment
-/ai_gateway/.venv/
+.venv/
+**/.venv/
 
 # Secrets — never commit
+.env
 **/.env
-ibor-ai-gateway/.env
 
 # UI build output
 ibor-ui/dist/

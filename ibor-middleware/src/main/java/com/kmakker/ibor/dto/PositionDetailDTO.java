@@ -8,6 +8,7 @@ public record PositionDetailDTO (
     LocalDate asOf,
     String portfolioCode,
     String instrumentCode,
+    String instrumentName,
     String instrumentType,
     BigDecimal netQty,
     BigDecimal price,

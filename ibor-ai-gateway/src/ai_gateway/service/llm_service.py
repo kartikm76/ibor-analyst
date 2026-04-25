@@ -11,6 +11,7 @@ from anthropic import AsyncAnthropic
 
 from ai_gateway.model.schemas import IborAnswer
 from ai_gateway.service.ibor_service import IborService
+from ai_gateway.service.instrument_resolver import InstrumentResolver
 from ai_gateway.service.market_tools import MarketTools
 
 log = logging.getLogger(__name__)
@@ -35,8 +36,9 @@ CRITICAL: You MUST call positions for ANY portfolio-level analysis or discussion
 Call plan_query with your analysis plan. Rules:
 - Call positions if the question mentions: my portfolio, my positions, my holdings, concentration, diversification, allocation, exposure, risk, rebalancing, or any portfolio-level assessment. This is non-negotiable.
 - Use pnl for "performance", "P&L", "how did I do" — default prior to yesterday.
-- Use trades ONLY when a specific instrument code is named in the question.
+- Use trades when the user references a specific instrument by name, ticker, or code (e.g., "AAPL", "Apple", "EQ-AAPL").
 - Use prices ONLY when price history is explicitly requested.
+- For trades/prices, set instrumentType in args if the user specifies a type: "bond", "equity", "option", "future" → BOND, EQUITY, OPT, FUT.
 - explicit_tickers: ONLY tickers the user directly names (e.g. "AAPL", "MSFT"). Do NOT infer.
 - needs_macro: {market_contents}. Set to false if market context is disabled.
 - Always include "portfolioCode": "P-ALPHA" if no other portfolio is mentioned.
@@ -112,7 +114,10 @@ _PLAN_TOOL: Dict[str, Any] = {
                             "type": "string",
                             "enum": ["positions", "trades", "pnl", "prices"],
                         },
-                        "args": {"type": "object"},
+                        "args": {
+                            "type": "object",
+                            "description": "For trades/prices, include instrumentType (EQUITY, BOND, OPT, FUT) if the user specified it."
+                        },
                     },
                     "required": ["tool", "args"],
                 },
@@ -157,11 +162,13 @@ class LlmService:
         anthropic_client: AsyncAnthropic,
         service: IborService,
         market_tools: MarketTools,
+        resolver: Optional[InstrumentResolver] = None,
         model: Optional[str] = None,
     ) -> None:
         self._anthropic = anthropic_client
         self._service = service
         self._market = market_tools
+        self._resolver = resolver
         self._model = model or "claude-sonnet-4-6"
 
     async def summarize(self, verbose_text: str) -> dict:
@@ -198,11 +205,11 @@ class LlmService:
         needs_macro: bool = plan.get("needs_macro", False) if not market_contents else plan.get("needs_macro", True)
 
         if not ibor_calls:
-            return IborAnswer(
-                question=question,
-                as_of=today,
-                gaps=["Could not determine what IBOR data to fetch for this question."],
-            )
+            api_error = plan.get("_error")
+            gaps = [f"Anthropic API error: {api_error}"] if api_error else [
+                "Could not determine what IBOR data to fetch for this question."
+            ]
+            return IborAnswer(question=question, as_of=today, gaps=gaps)
 
         ibor_coros = [
             self._dispatch_ibor(c["tool"], c.get("args", {}), today)
@@ -236,7 +243,33 @@ class LlmService:
             ibor_results = list(await asyncio.gather(*ibor_coros, return_exceptions=True))
 
         # ── Step 3: synthesis ─────────────────────────────────────────────
+        # Short-circuit if any IBOR dispatch needs a clarification from the user
+        for result in ibor_results:
+            if isinstance(result, IborAnswer) and result.clarification:
+                return IborAnswer(question=question, as_of=today, clarification=result.clarification)
+
         return await self._synthesize(question, today, ibor_calls, ibor_results, market_context, market_contents)
+
+    # ── Instrument resolution ─────────────────────────────────────────────
+
+    def _resolve_instrument(self, raw_code: str, today, type_hint: Optional[str] = None) -> "str | IborAnswer":
+        """Resolve LLM-supplied instrument name/ticker/code to canonical instrument_code.
+        Returns the canonical code string, or an IborAnswer with clarification if ambiguous/not found.
+        type_hint: instrument type extracted by the intent LLM (EQUITY, BOND, etc.)
+        """
+        if not raw_code or not self._resolver:
+            return raw_code
+
+        result = self._resolver.resolve(raw_code, type_hint=type_hint)
+
+        if result.is_ambiguous or not result.matches:
+            return IborAnswer(
+                question=raw_code,
+                as_of=today,
+                clarification=result.clarification,
+            )
+
+        return result.matches[0].code
 
     # ── Intent parsing ────────────────────────────────────────────────────
 
@@ -250,12 +283,11 @@ class LlmService:
                 tools=[_PLAN_TOOL],
                 tool_choice={"type": "tool", "name": "plan_query"},
             )
-            # Anthropic returns tool use as a content block with type "tool_use"
             tool_block = next((b for b in resp.content if b.type == "tool_use"), None)
             return tool_block.input if tool_block else {}
         except Exception as exc:
-            log.warning("intent parse failed: %s", exc)
-            return {"ibor_calls": [], "explicit_tickers": [], "needs_macro": False}
+            log.error("intent parse failed [model=%s]: %s: %s", self._model, type(exc).__name__, exc)
+            return {"ibor_calls": [], "explicit_tickers": [], "needs_macro": False, "_error": str(exc)}
 
     # ── IBOR dispatch ─────────────────────────────────────────────────────
 
@@ -283,14 +315,26 @@ class LlmService:
                     instrument_code=args.get("instrumentCode"),
                 )
             if tool == "trades":
+                resolved = self._resolve_instrument(
+                    args.get("instrumentCode", ""), today,
+                    type_hint=args.get("instrumentType"),
+                )
+                if isinstance(resolved, IborAnswer):
+                    return resolved
                 return await self._service.trades(
                     portfolio_code=args.get("portfolioCode") or "P-ALPHA",
-                    instrument_code=args.get("instrumentCode", ""),
+                    instrument_code=resolved,
                     as_of=_d("asOf", today),
                 )
             if tool == "prices":
+                resolved = self._resolve_instrument(
+                    args.get("instrumentCode", ""), today,
+                    type_hint=args.get("instrumentType"),
+                )
+                if isinstance(resolved, IborAnswer):
+                    return resolved
                 return await self._service.prices(
-                    instrument_code=args.get("instrumentCode", ""),
+                    instrument_code=resolved,
                     from_date=_d("fromDate", today - timedelta(days=30)),
                     to_date=_d("toDate", today),
                     source=args.get("source"),

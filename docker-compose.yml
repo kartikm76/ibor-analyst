@@ -44,7 +44,6 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ibor
       SPRING_DATASOURCE_USERNAME: ibor
       SPRING_DATASOURCE_PASSWORD: ibor
-      SPRING_PROFILES_ACTIVE: docker
     ports:
       - "8080:8080"
     depends_on:
@@ -64,7 +63,8 @@ services:
     container_name: ibor-ai-gateway
     environment:
       PG_DSN: postgresql://ibor:ibor@postgres:5432/ibor
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-ant-placeholder}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      STRUCTURED_API_BASE: http://ibor-middleware:8080/api
     ports:
       - "8000:8000"
     depends_on:

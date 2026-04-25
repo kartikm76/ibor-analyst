@@ -42,7 +42,28 @@ echo "Verifying core dependencies..."
 echo ""
 ok "Environment is frozen and reproducible"
 echo ""
+
+# ── .env check (repo root — single .env for the whole stack) ─────────────────
+REPO_ROOT="$(cd "$ROOT/.." && pwd)"
+if [ ! -f "$REPO_ROOT/.env" ]; then
+    info "No .env found — creating from .env.example..."
+    cp "$REPO_ROOT/.env.example" "$REPO_ROOT/.env"
+    echo ""
+    echo -e "${RED}ACTION REQUIRED: Edit .env and set your real ANTHROPIC_API_KEY${NC}"
+    echo "  File: $REPO_ROOT/.env"
+    echo ""
+else
+    if grep -q "sk-ant-\.\.\.your-key-here\.\.\." "$REPO_ROOT/.env" 2>/dev/null; then
+        echo -e "${RED}WARNING: .env still has the placeholder ANTHROPIC_API_KEY${NC}"
+        echo "  Edit $REPO_ROOT/.env and replace sk-ant-...your-key-here... with your real key."
+        echo ""
+    else
+        ok ".env looks configured"
+        echo ""
+    fi
+fi
+
 echo "Next steps:"
-echo "  1. Set environment variables in .env (if needed)"
-echo "  2. Run: ./start_all.sh"
+echo "  1. Verify $REPO_ROOT/.env has your real ANTHROPIC_API_KEY"
+echo "  2. Run: uv run uvicorn ai_gateway.main:app --host 127.0.0.1 --port 8000 --reload"
 echo ""

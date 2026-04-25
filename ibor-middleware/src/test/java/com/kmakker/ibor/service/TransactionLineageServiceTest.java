@@ -20,7 +20,7 @@ public class TransactionLineageServiceTest {
         var service = new TransactionLineageService(repo);
 
         var header = new PositionDetailDTO(
-                LocalDate.now(), "ALPHA", "IBM", "EQUITY",
+                LocalDate.now(), "ALPHA", "IBM", "IBM Corp.", "EQUITY",
                 BigDecimal.valueOf(100), BigDecimal.valueOf(120),
                 BigDecimal.valueOf(12000), "USD", null, "NONE",
                 List.of(), List.of());

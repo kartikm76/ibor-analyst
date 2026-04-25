@@ -27,7 +27,7 @@ public class TransactionLineageService {
         var header = transactionLineageRepository.fetchHeader(asOf, portfolioCode, instrumentCode);
         if (header == null) {
             return new PositionDetailDTO(
-                    asOf, portfolioCode, instrumentCode, null,
+                    asOf, portfolioCode, instrumentCode, null, null,
                     BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
                     "USD", BigDecimal.ZERO,
                     "NONE", List.of(), List.of());
@@ -47,6 +47,7 @@ public class TransactionLineageService {
                 header.asOf(),
                 header.portfolioCode(),
                 header.instrumentCode(),
+                header.instrumentName(),
                 header.instrumentType(),
                 header.netQty(),
                 header.price(),

@@ -40,23 +40,22 @@ MAX_WAIT=120
 ELAPSED=0
 
 while [ $ELAPSED -lt $MAX_WAIT ]; do
-    # Check if bootstrap container still exists
-    if ! docker ps -a | grep -q "ibor-bootstrap"; then
-        error "Bootstrap container not found"
-    fi
+    BOOTSTRAP_STATUS=$(docker inspect -f '{{.State.Status}}' ibor-bootstrap 2>/dev/null || echo "missing")
 
-    # Check if bootstrap exited
-    BOOTSTRAP_STATUS=$(docker inspect -f '{{.State.Status}}' ibor-bootstrap 2>/dev/null || echo "")
-    if [ "$BOOTSTRAP_STATUS" = "exited" ]; then
-        # Check if it exited successfully
-        EXIT_CODE=$(docker inspect -f '{{.State.ExitCode}}' ibor-bootstrap 2>/dev/null || echo "1")
-        if [ "$EXIT_CODE" = "0" ]; then
-            ok "Database initialized and data loaded"
-            break
-        else
-            error "Bootstrap failed (exit code: $EXIT_CODE). Check: docker logs ibor-bootstrap"
-        fi
-    fi
+    case "$BOOTSTRAP_STATUS" in
+        exited)
+            EXIT_CODE=$(docker inspect -f '{{.State.ExitCode}}' ibor-bootstrap 2>/dev/null || echo "1")
+            if [ "$EXIT_CODE" = "0" ]; then
+                ok "Database initialized and data loaded"
+                break
+            else
+                error "Bootstrap failed (exit code: $EXIT_CODE). Check: docker logs ibor-bootstrap"
+            fi
+            ;;
+        missing)
+            error "Bootstrap container not found"
+            ;;
+    esac
 
     sleep 2
     ELAPSED=$((ELAPSED + 2))

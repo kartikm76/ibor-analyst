@@ -18,11 +18,12 @@ class QuotaStatus(BaseModel):
 class IborAnswer(BaseModel):
     """Response envelope returned by all routes — REST and chat alike."""
     question: str
-    as_of: date
+    as_of: Optional[date] = None
     summary: Optional[str] = None
     data: Dict[str, Any] = Field(default_factory=dict)
     source: Optional[str] = None
     gaps: List[str] = Field(default_factory=list)
+    clarification: Optional[str] = None
     quota_status: Optional[QuotaStatus] = None
 
 

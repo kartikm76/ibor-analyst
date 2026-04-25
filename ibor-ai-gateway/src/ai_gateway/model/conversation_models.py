@@ -71,14 +71,12 @@ class ConversationEmbeddingResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
 class ConversationListRequest(BaseModel):
     """Request to list conversations."""
     analyst_id: str
     portfolio_id: Optional[str] = None
     limit: int = 20
     offset: int = 0
-
 
 class ConversationListResponse(BaseModel):
     """Response: list of conversations."""

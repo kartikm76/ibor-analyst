@@ -1,5 +1,6 @@
 from __future__ import annotations
 from uuid import uuid4
+from datetime import date
 from fastapi import APIRouter, HTTPException, Request
 from ai_gateway.model.schemas import (
     ChatRequest, IborAnswer, PnLRequest, PositionsRequest, PricesRequest, TradesRequest, QuotaStatus,
@@ -95,7 +96,7 @@ def make_analyst_router(
                 if quota_status.quota_exceeded:
                     return IborAnswer(
                         question=body.question,
-                        as_of=body.as_of if hasattr(body, 'as_of') else None,
+                        as_of=date.today(),
                         summary=f"❌ Daily question limit reached ({quota_status.questions_limit} questions). Come back tomorrow at {quota_status.reset_time}",
                         quota_status=quota_status
                     )

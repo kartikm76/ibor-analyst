@@ -212,6 +212,7 @@ CREATE INDEX idx_ap_current ON ibor.dim_account_portfolio (account_vid) WHERE is
 -- RAG TABLES (requires pgvector image)
 -- =========================================================
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Documents you ingest (files, web pages, etc.)
 CREATE TABLE IF NOT EXISTS ibor.rag_documents (

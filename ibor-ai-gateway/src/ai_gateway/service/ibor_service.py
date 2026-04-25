@@ -92,8 +92,9 @@ class IborService:
             page=page,
             size=size,
         )
-        raw_txns = _to_list(raw.get("transactions", raw) if isinstance(raw, dict) else raw)
-        transactions = [_remap_transaction(t) for t in raw_txns]
+        parent = raw if isinstance(raw, dict) else {}
+        raw_txns = _to_list(parent.get("transactions", raw))
+        transactions = [_remap_transaction(t, parent) for t in raw_txns]
         net_qty = _sum_decimal(t.get("quantity") for t in transactions)
         gross = _sum_decimal(_mul(t.get("quantity"), t.get("price")) for t in transactions)
 
@@ -199,22 +200,28 @@ class IborService:
 def _remap_position(p: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "instrument": p.get("instrumentId"),
+        "name": p.get("instrumentName"),
         "type": p.get("instrumentType"),
         "quantity": p.get("netQty"),
         "price": p.get("price"),
         "marketValue": p.get("mktValue"),
         "currency": p.get("currency"),
+        "snapDate": p.get("snapDate"),
     }
 
 
-def _remap_transaction(t: Dict[str, Any]) -> Dict[str, Any]:
+def _remap_transaction(t: Dict[str, Any], parent: Dict[str, Any] = {}) -> Dict[str, Any]:
     return {
         "tradeId": t.get("externalId"),
+        "instrument": parent.get("instrumentCode"),
+        "name": parent.get("instrumentName"),
+        "type": parent.get("instrumentType"),
         "date": t.get("transactionDate"),
         "action": t.get("action"),
         "quantity": t.get("quantity"),
         "price": t.get("price"),
         "grossAmount": t.get("grossAmount"),
+        "broker": t.get("broker"),
     }
 
 

@@ -64,18 +64,23 @@ function MessageBubble({ message }) {
     )
   }
 
+  const timeLabel = message.timestamp
+    ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null
+
   return (
     <div className={`chat-bubble-wrap ${isUser ? 'user' : 'assistant'}`}>
       <div className={`chat-bubble ${isUser ? 'user' : 'assistant'}`}>
         {message.thinking ? <ThinkingDots /> : content}
       </div>
+      {timeLabel && <div className="chat-timestamp">{timeLabel}</div>}
     </div>
   )
 }
 
 export default function AiChat({ onAnswer, useContext, onContextChange, positions, totalAum }) {
   const [messages, setMessages] = useState([
-    { id: 1, role: 'assistant', content: GREETING }
+    { id: 1, role: 'assistant', content: GREETING, timestamp: Date.now() }
   ])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -101,10 +106,11 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
     const words = question.split(/\s+/).filter(w => /^[a-zA-Z$]{2,}$/.test(w))
     if (words.length < 2) {
       const userMsgId = nextId.current++
+      const t = Date.now()
       setMessages(prev => [
         ...prev,
-        { id: userMsgId, role: 'user', content: question },
-        { id: nextId.current++, role: 'assistant', content: 'Please ask a valid question about your portfolio, positions, trades, or market data.' },
+        { id: userMsgId, role: 'user', content: question, timestamp: t },
+        { id: nextId.current++, role: 'assistant', content: 'Please ask a valid question about your portfolio, positions, trades, or market data.', timestamp: t },
       ])
       setInput('')
       return
@@ -113,9 +119,10 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
     const userMsgId = nextId.current++
     const thinkingMsgId = nextId.current++
 
+    const now = Date.now()
     setMessages(prev => [
       ...prev,
-      { id: userMsgId, role: 'user', content: question },
+      { id: userMsgId, role: 'user', content: question, timestamp: now },
       { id: thinkingMsgId, role: 'assistant', content: '', thinking: true },
     ])
     setInput('')
@@ -149,7 +156,7 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
       setMessages(prev =>
         prev.map(m =>
           m.id === thinkingMsgId
-            ? { ...m, content: summary, thinking: false }
+            ? { ...m, content: summary, thinking: false, timestamp: Date.now() }
             : m
         )
       )
@@ -166,7 +173,7 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
       setMessages(prev =>
         prev.map(m =>
           m.id === thinkingMsgId
-            ? { ...m, content: `${errMsg}`, thinking: false }
+            ? { ...m, content: `${errMsg}`, thinking: false, timestamp: Date.now() }
             : m
         )
       )

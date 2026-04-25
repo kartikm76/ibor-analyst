@@ -1,3 +1,6 @@
+# Base configuration — always loaded. No profile overlays exist for Docker or local dev.
+# application-test.yml is the only overlay; it activates automatically during test runs.
+
 server:
   port: 8080
 spring:
@@ -6,22 +9,13 @@ spring:
     username: ${DB_USER:ibor}
     password: ${DB_PASSWORD:ibor}
     hikari:
-      maximum-pool-size: 25  # Increased from default 10 for concurrent requests
+      maximum-pool-size: 25
       minimum-idle: 5
-      connection-timeout: 10000  # 10 seconds
-      idle-timeout: 600000  # 10 minutes
-      max-lifetime: 1800000  # 30 minutes
+      connection-timeout: 10000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   jooq:
     sql-dialect: POSTGRES
-openai:
-  api-key: ${OPENAI_API_KEY:XXXX}
-  baseUrl: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-  chatModel: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
-  embedModel: ${OPENAI_EMBED_MODEL:text-embedding-3-small}
-rag:
-  topK: 6
-  chunkChars: 1000
-  chunkOverlap: 150
 
 management:
   endpoints:
@@ -30,10 +24,11 @@ management:
         include: health,info
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: always
   health:
     db:
       enabled: false
 logging:
   level:
+    com.kmakker.ibor: INFO
     com.kmakker.ibor.jodi: DEBUG
