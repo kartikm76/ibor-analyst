@@ -1,0 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# IBOR Bootstrap - Self-contained database initialization job
+# Build context: ibor-db/  (used by Railway — all SQL + CSV files are inside)
+# ─────────────────────────────────────────────────────────────────────────────
+
+FROM postgres:16-alpine
+
+RUN apk add --no-cache bash
+
+WORKDIR /bootstrap
+
+# SQL init scripts and CSV data are inside ibor-db/ — self-contained
+COPY init/*.sql /bootstrap/init/
+COPY data/*.csv /bootstrap/data/
+COPY bootstrap.sh /bootstrap/bootstrap.sh
+RUN chmod +x /bootstrap/bootstrap.sh
+
+ENTRYPOINT ["/bin/bash", "/bootstrap/bootstrap.sh"]
