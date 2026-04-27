@@ -2,7 +2,7 @@
 # application-test.yml is the only overlay; it activates automatically during test runs.
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:ibor}}
