@@ -27,6 +27,13 @@ class Settings:
     structured_api_base: str = os.getenv("STRUCTURED_API_BASE", "http://localhost:8080/api")
     verify_ssl: bool          = os.getenv("VERIFY_SSL", "false").lower() == "true"
 
+    # ── CORS ─────────────────────────────────────────────────────────────────
+    allowed_origins: list[str] = (
+        os.getenv("ALLOWED_ORIGINS", "").split(",")
+        if os.getenv("ALLOWED_ORIGINS")
+        else ["http://localhost:4200", "http://localhost:5173", "localhost", "127.0.0.1"]
+    )
+
     # ── Security ─────────────────────────────────────────────────────────────
     environment: str                    = os.getenv("ENVIRONMENT", "development")
     rate_limit_requests_per_minute: int = int(os.getenv("RATE_LIMIT_RPM", "30"))

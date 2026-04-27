@@ -23,7 +23,6 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 import psycopg
 
-from ai_gateway.service.embedding_provider import EmbeddingProvider
 
 log = logging.getLogger(__name__)
 
@@ -35,16 +34,9 @@ class ConversationService:
     Composite key (analyst_id, session_id) ensures no collisions across analysts.
     """
 
-    def __init__(self, pg_pool, anthropic_client, embedding_provider=None):
-        """
-        Args:
-            pg_pool: psycopg connection pool
-            anthropic_client: Anthropic AsyncClient for summarization
-            embedding_provider: Local embedding provider (uses sentence-transformers)
-        """
+    def __init__(self, pg_pool, anthropic_client):
         self._pool = pg_pool
         self._anthropic = anthropic_client
-        self._embedding_provider = embedding_provider or EmbeddingProvider()
 
     # ────────────────────────────────────────────────────────────────
     # LIFECYCLE: Get/Create → Save → Retrieve
@@ -305,62 +297,9 @@ class ConversationService:
             context_id: "P-ALPHA", "EQ-AAPL", etc.
             analyst_id: User identifier
         """
-        try:
-            # Step 1: Extract delta
-            delta_text = await self.extract_delta(conversation_id)
-
-            if not delta_text.strip():
-                log.debug(f"embed_and_store: No new messages for conversation_id={conversation_id}")
-                return
-
-            # Step 2: Summarize delta via OpenAI (for better embedding quality)
-            summary = await self._summarize_text_via_openai(delta_text)
-
-            if not summary.strip():
-                log.warning(f"embed_and_store: Failed to summarize for conversation_id={conversation_id}")
-                return
-
-            # Step 3: Generate embedding (local, no API call)
-            log.debug(f"embed_and_store: Embedding for conversation_id={conversation_id}")
-            embedding = await self._embedding_provider.embed(summary)
-
-            # Step 4: Store in pgvector
-            with self._pool.connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        INSERT INTO conv.conversation_embedding
-                        (conversation_id, context_type, context_id, analyst_id,
-                         conversation_summary, embedding, embedding_model)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        """,
-                        (
-                            conversation_id,
-                            context_type,
-                            context_id,
-                            analyst_id,
-                            summary,
-                            embedding,
-                            self._embedding_provider.model_name
-                        )
-                    )
-
-                    # Step 5: Update checkpoint
-                    cur.execute(
-                        """
-                        UPDATE conv.conversation
-                        SET last_embedding_checkpoint = now(),
-                            pending_embedding = false
-                        WHERE conversation_id = %s
-                        """,
-                        (conversation_id,)
-                    )
-
-                    log.info(f"embed_and_store: Stored embedding for conversation_id={conversation_id}")
-
-        except Exception as e:
-            log.error(f"Failed to embed_and_store: {e}")
-            raise
+        # Embeddings disabled — no-op until a real provider is configured
+        log.debug(f"embed_and_store: skipped (embedding provider disabled) for {conversation_id}")
+        return
 
     async def search_similar_conversations(
         self,
@@ -392,56 +331,9 @@ class ConversationService:
                 ...
             ]
         """
-        try:
-            # Step 1: Embed the query (local, no API call)
-            log.debug(f"search_similar: Embedding query for {context_type}/{context_id}")
-            query_embedding = await self._embedding_provider.embed(query)
-
-            # Step 2: Search pgvector
-            with self._pool.connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        SELECT
-                            ce.conversation_id,
-                            ce.conversation_summary,
-                            (1 - (ce.embedding <=> %s::vector)) AS similarity_score,
-                            c.created_at
-                        FROM conv.conversation_embedding ce
-                        JOIN conv.conversation c ON c.conversation_id = ce.conversation_id
-                        WHERE
-                            ce.context_type = %s
-                            AND ce.context_id = %s
-                            AND ce.analyst_id = %s
-                        ORDER BY similarity_score DESC
-                        LIMIT %s
-                        """,
-                        (query_embedding, context_type, context_id, analyst_id, top_k)
-                    )
-
-                    rows = cur.fetchall()
-
-                    if not rows:
-                        log.debug(f"search_similar: No similar conversations found")
-                        return []
-
-                    results = []
-                    for row in rows:
-                        results.append({
-                            "conversation_id": str(row["conversation_id"]),
-                            "summary": row["conversation_summary"],
-                            "similarity_score": float(row["similarity_score"]),
-                            "created_at": row["created_at"]
-                        })
-
-                    log.info(f"search_similar: Found {len(results)} similar conversations "
-                            f"(top: {results[0]['similarity_score']:.2f})")
-                    return results
-
-        except Exception as e:
-            log.error(f"Failed to search_similar_conversations: {e}")
-            # Don't raise — RAG failure shouldn't break chat
-            return []
+        # Embeddings disabled — returns empty until a real provider is configured
+        log.debug("search_similar_conversations: skipped (embedding provider disabled)")
+        return []
 
     # ────────────────────────────────────────────────────────────────
     # HELPERS

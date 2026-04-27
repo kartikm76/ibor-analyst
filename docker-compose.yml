@@ -82,6 +82,10 @@ services:
       context: ./ibor-ui
       dockerfile: Dockerfile
     container_name: ibor-ui
+    environment:
+      GATEWAY_URL: http://ibor-ai-gateway:8000
+      MIDDLEWARE_URL: http://ibor-middleware:8080
+      PORT: "5173"
     ports:
       - "5173:5173"
     depends_on:

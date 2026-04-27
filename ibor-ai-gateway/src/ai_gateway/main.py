@@ -6,8 +6,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from anthropic import AsyncAnthropic
 
-from ai_gateway.service.embedding_provider import EmbeddingProvider
-
 from ai_gateway.config.settings import settings
 from ai_gateway.config.db import PgPool, PgPoolConfig
 from ai_gateway.repository.ibor_repository import IborRepository
@@ -39,13 +37,12 @@ def create_app() -> FastAPI:
     ibor_repository = IborRepository(base_url=settings.structured_api_base)
     service = IborService(client=ibor_repository)
     anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
-    embedding_provider = EmbeddingProvider()  # Local embeddings (no API key needed)
     market_tools = MarketTools()
 
     # Initialize database pool and conversation service
     pg_config = PgPoolConfig(dsn=settings.pg_dsn)
     pg_pool = PgPool(pg_config)
-    conversation_service = ConversationService(pg_pool, anthropic_client, embedding_provider)
+    conversation_service = ConversationService(pg_pool, anthropic_client)
 
     instrument_resolver = InstrumentResolver(pg_pool)
     llm_service = LlmService(
@@ -57,7 +54,7 @@ def create_app() -> FastAPI:
     )
 
     # Initialize quota service
-    quota_service = QuotaService(pg_pool, max_questions_per_day=20)
+    quota_service = QuotaService(pg_pool, max_questions_per_day=settings.max_questions_per_day)
 
     # Initialize embedding scheduler
     embedding_scheduler = EmbeddingScheduler(conversation_service, pg_pool)
@@ -81,7 +78,7 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityMiddleware)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:4200", "http://localhost:5173", "localhost", "127.0.0.1"],
+        allow_origins=settings.allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
