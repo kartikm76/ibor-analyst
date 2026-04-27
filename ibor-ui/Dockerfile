@@ -86,6 +86,9 @@ EOF
 RUN cat > /docker-entrypoint-nginx.sh <<'SCRIPT'
 #!/bin/sh
 set -e
+export PORT="${PORT:-5173}"
+export GATEWAY_URL="${GATEWAY_URL:-http://localhost:8000}"
+export MIDDLEWARE_URL="${MIDDLEWARE_URL:-http://localhost:8080}"
 envsubst '${GATEWAY_URL} ${MIDDLEWARE_URL} ${PORT}' \
   < /etc/nginx/conf.d/default.conf.template \
   > /etc/nginx/conf.d/default.conf
