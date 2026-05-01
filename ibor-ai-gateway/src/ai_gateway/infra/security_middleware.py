@@ -48,7 +48,20 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if request.url.path in ["/health", "/docs", "/openapi.json", "/"]:
             return await call_next(request)
 
-        # 1. RATE LIMITING
+        # 1. API KEY CHECK
+        # Railway private network uses 100.64.x.x (Tailscale CGNAT) — trust these directly.
+        # Public traffic arrives via Fastly CDN with non-100.64 IPs and must present the key.
+        raw_ip = request.client.host if request.client else "unknown"
+        is_private_network = raw_ip.startswith("100.64.")
+        if settings.api_key and not is_private_network:
+            request_key = request.headers.get("X-API-Key", "")
+            if request_key != settings.api_key:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid or missing API key."},
+                )
+
+        # 2. RATE LIMITING
         if settings.rate_limit_enabled and not await rate_limiter.is_allowed(client_ip):
             rate_status = await rate_limiter.get_status(client_ip)
             return JSONResponse(
@@ -60,7 +73,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        # 2. REQUEST LOGGING & TIMING
+        # 3. REQUEST LOGGING & TIMING
         start_time = time.time()
         question_preview = None
 
@@ -79,10 +92,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 return {"type": "http.request", "body": body, "more_body": False}
             request._receive = receive
 
-        # 3. CALL ENDPOINT
+        # 4. CALL ENDPOINT
         response = await call_next(request)
 
-        # 4. POST-RESPONSE LOGGING
+        # 5. POST-RESPONSE LOGGING
         duration_ms = (time.time() - start_time) * 1000
         await request_logger.log_request(
             client_ip=client_ip,
@@ -93,7 +106,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             response_time_ms=duration_ms,
         )
 
-        # 5. ADD SECURITY HEADERS
+        # 6. ADD SECURITY HEADERS
         response.headers["X-RateLimit-Limit"] = str(settings.rate_limit_requests_per_minute)
         if settings.rate_limit_enabled:
             rate_status = await rate_limiter.get_status(client_ip)

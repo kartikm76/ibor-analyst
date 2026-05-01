@@ -40,12 +40,15 @@ http {
 EOF
 
 # Write Nginx site config TEMPLATE
-# ${GATEWAY_URL} and ${MIDDLEWARE_URL} are the only vars substituted at runtime.
+# ${GATEWAY_URL}, ${MIDDLEWARE_URL}, ${API_KEY}, ${PORT}, ${RESOLVER} substituted at runtime.
 # All other nginx $variables are single-dollar and left untouched by envsubst.
 RUN cat > /etc/nginx/conf.d/default.conf.template <<'EOF'
 server {
     listen ${PORT};
     server_name _;
+
+    # DNS resolver read from /etc/resolv.conf at startup (resolves .railway.internal)
+    resolver ${RESOLVER} valid=30s;
 
     location / {
         root /usr/share/nginx/html;
@@ -54,20 +57,32 @@ server {
     }
 
     location /analyst/ {
-        proxy_pass ${GATEWAY_URL}/analyst/;
-        proxy_set_header Host $host;
+        # Private network — variable forces per-request DNS via resolver above
+        set $gateway_url ${GATEWAY_URL};
+        proxy_pass $gateway_url;
+        include /etc/nginx/conf.d/gateway_auth.conf;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 60s;
+        proxy_read_timeout 120s;
+        proxy_connect_timeout 10s;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
     }
 
     location /api/ {
-        proxy_pass ${MIDDLEWARE_URL}/api/;
-        proxy_set_header Host $host;
+        # Private network — variable forces per-request DNS via resolver above
+        set $middleware_url ${MIDDLEWARE_URL};
+        proxy_pass $middleware_url;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+        proxy_connect_timeout 10s;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
     }
 
     location /health {
@@ -89,7 +104,16 @@ set -e
 export PORT="${PORT:-5173}"
 export GATEWAY_URL="${GATEWAY_URL:-http://localhost:8000}"
 export MIDDLEWARE_URL="${MIDDLEWARE_URL:-http://localhost:8080}"
-envsubst '${GATEWAY_URL} ${MIDDLEWARE_URL} ${PORT}' \
+export API_KEY="${API_KEY:-}"
+# Write API key as a standalone nginx include file — avoids envsubst edge cases
+printf 'proxy_set_header X-API-Key "%s";\n' "$API_KEY" > /etc/nginx/conf.d/gateway_auth.conf
+# Substitute remaining env vars
+RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf)
+export RESOLVER="${RESOLVER:-8.8.8.8}"
+export GATEWAY_URL="${GATEWAY_URL:-http://localhost:8000}"
+export MIDDLEWARE_URL="${MIDDLEWARE_URL:-http://localhost:8080}"
+export PORT="${PORT:-5173}"
+envsubst '${GATEWAY_URL} ${MIDDLEWARE_URL} ${PORT} ${RESOLVER}' \
   < /etc/nginx/conf.d/default.conf.template \
   > /etc/nginx/conf.d/default.conf
 exec nginx -g "daemon off;"

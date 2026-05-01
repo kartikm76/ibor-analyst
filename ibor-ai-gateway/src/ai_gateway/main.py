@@ -69,7 +69,15 @@ def create_app() -> FastAPI:
         await ibor_repository.aclose()
         pg_pool.close()
 
-    app = FastAPI(title="IBOR AI Gateway", version="0.2.0", lifespan=lifespan)
+    _in_prod = settings.environment == "production"
+    app = FastAPI(
+        title="IBOR AI Gateway",
+        version="0.2.0",
+        lifespan=lifespan,
+        docs_url=None if _in_prod else "/docs",
+        redoc_url=None if _in_prod else "/redoc",
+        openapi_url=None if _in_prod else "/openapi.json",
+    )
     app.state.pg_pool = pg_pool
 
     # Security middlewares (added in reverse order — they execute top-to-bottom)

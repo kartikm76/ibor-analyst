@@ -95,6 +95,60 @@ Rules:
 
 _SYNTHESIS_SYSTEM = _SYNTHESIS_SYSTEM_WITH_MARKET  # Default for backward compatibility
 
+_MARKET_ONLY_SYNTHESIS_SYSTEM = """\
+You are a senior portfolio analyst at an asset management firm.
+A portfolio manager has asked a market intelligence question.
+Answer using the market data provided. Be concise and professional.
+Flowing analyst prose — no bullet points, no headers. 3-5 sentences.
+Today's date: {today}
+"""
+
+_OFF_TOPIC_MESSAGE = (
+    "I'm an institutional IBOR analyst — I help portfolio managers understand their managed books. "
+    "I can't advise on personal investments, retirement accounts, or personal financial planning. "
+    "Try asking about your portfolio positions, P&L, trade history, or market context for your holdings."
+)
+
+# ---------------------------------------------------------------------------
+# Guardrail classifier
+# ---------------------------------------------------------------------------
+
+_GUARDRAIL_SYSTEM = """\
+You are a question classifier for an institutional IBOR analyst tool used by professional portfolio managers.
+
+Classify the question into exactly one of three categories:
+
+"proceed" — Questions about managing institutional portfolios, or anything ambiguous. Default to this.
+  Examples: positions, P&L, trades, risk, allocation, rebalancing, "should I buy TSLA" (assume for the portfolio), sector exposure.
+
+"market_only" — Pure market intelligence with no portfolio context required.
+  Examples: "big movers in NASDAQ last week", "where is VIX", "what did the Fed do", "summarize NVDA earnings", "what happened to rates".
+
+"reject" — Explicit personal finance signals only (retirement accounts, personal savings, personal tax advice).
+  Examples: "what to put in my Roth IRA", "best ETFs for my 401k", "should I sell my house to invest", "college fund stocks".
+
+When in doubt, classify as "proceed". Rejecting a legitimate analyst question is worse than answering an edge case.
+"""
+
+_GUARDRAIL_TOOL: Dict[str, Any] = {
+    "name": "classify_question",
+    "description": "Classify the question as proceed, market_only, or reject.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "category": {
+                "type": "string",
+                "enum": ["proceed", "market_only", "reject"],
+            },
+            "reason": {
+                "type": "string",
+                "description": "One sentence explaining the classification.",
+            },
+        },
+        "required": ["category", "reason"],
+    },
+}
+
 # ---------------------------------------------------------------------------
 # Intent tool definition  (Anthropic format: input_schema, no type:function wrapper)
 # ---------------------------------------------------------------------------
@@ -195,8 +249,61 @@ class LlmService:
             log.warning("summarize failed: %s", exc)
             return {"summary": [verbose_text[:200] + "..."]}
 
+    async def _classify_question(self, question: str) -> Dict[str, Any]:
+        try:
+            resp = await self._anthropic.messages.create(
+                model=self._model,
+                max_tokens=256,
+                system=_GUARDRAIL_SYSTEM,
+                messages=[{"role": "user", "content": question}],
+                tools=[_GUARDRAIL_TOOL],
+                tool_choice={"type": "tool", "name": "classify_question"},
+            )
+            tool_block = next((b for b in resp.content if b.type == "tool_use"), None)
+            result = tool_block.input if tool_block else {"category": "proceed", "reason": "fallback"}
+            log.info("guardrail: %s — %s", result.get("category"), result.get("reason"))
+            return result
+        except Exception as exc:
+            log.warning("guardrail classify failed: %s — defaulting to proceed", exc)
+            return {"category": "proceed", "reason": "fallback"}
+
+    async def _handle_market_only(self, question: str, today: date) -> IborAnswer:
+        # Reuse intent parser to extract any explicit tickers; always fetch macro
+        plan = await self._parse_intent(question, today, market_contents=True)
+        explicit_tickers = [t.upper() for t in plan.get("explicit_tickers", [])]
+
+        labels, coros = self._build_market_coros(explicit_tickers, needs_macro=True)
+        market_raw = list(await asyncio.gather(*coros, return_exceptions=True)) if coros else []
+        market_context = _collate_market(labels, market_raw)
+
+        payload = {"question": question, "as_of": str(today), "market_context": market_context}
+        resp = await self._anthropic.messages.create(
+            model=self._model,
+            max_tokens=1024,
+            system=_MARKET_ONLY_SYNTHESIS_SYSTEM.format(today=today),
+            messages=[{"role": "user", "content": json.dumps(payload)}],
+        )
+        text_block = next((b for b in resp.content if b.type == "text"), None)
+        summary = text_block.text if text_block else ""
+        return IborAnswer(
+            question=question,
+            as_of=today,
+            summary=summary,
+            data={"market": market_context},
+        )
+
     async def chat(self, question: str, market_contents: bool = True) -> IborAnswer:
         today = date.today()
+
+        # ── Step 0: guardrail ─────────────────────────────────────────────
+        guard = await self._classify_question(question)
+        category = guard.get("category", "proceed")
+
+        if category == "reject":
+            return IborAnswer(question=question, as_of=today, summary=_OFF_TOPIC_MESSAGE)
+
+        if category == "market_only" and market_contents:
+            return await self._handle_market_only(question, today)
 
         # ── Step 1: intent parse ──────────────────────────────────────────
         plan = await self._parse_intent(question, today, market_contents)

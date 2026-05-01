@@ -36,6 +36,7 @@ class Settings:
 
     # ── Security ─────────────────────────────────────────────────────────────
     environment: str                    = os.getenv("ENVIRONMENT", "development")
+    api_key: str                        = os.getenv("API_KEY", "")
     rate_limit_requests_per_minute: int = int(os.getenv("RATE_LIMIT_RPM", "30"))
     rate_limit_enabled: bool            = os.getenv("RATE_LIMIT_ENABLED", "false").lower() == "true"
     email_whitelist_enabled: bool       = os.getenv("EMAIL_WHITELIST_ENABLED", "false").lower() == "true"
