@@ -1,6 +1,7 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
+watchPatterns = ["ibor-ui/**"]
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
