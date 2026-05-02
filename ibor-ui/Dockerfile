@@ -105,16 +105,16 @@ RUN cat > /docker-entrypoint-nginx.sh <<'SCRIPT'
 #!/bin/sh
 set -e
 export PORT="${PORT:-5173}"
-export GATEWAY_URL="${GATEWAY_URL:-http://localhost:8000}"
-export MIDDLEWARE_URL="${MIDDLEWARE_URL:-http://localhost:8080}"
+export GATEWAY_URL="${GATEWAY_URL:-http://ibor-ai-gateway.railway.internal:8000}"
+export MIDDLEWARE_URL="${MIDDLEWARE_URL:-https://ibor-middleware-production.up.railway.app}"
 export API_KEY="${API_KEY:-}"
 # Write API key as a standalone nginx include file — avoids envsubst edge cases
 printf 'proxy_set_header X-API-Key "%s";\n' "$API_KEY" > /etc/nginx/conf.d/gateway_auth.conf
 # Substitute remaining env vars
 RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf)
 export RESOLVER="${RESOLVER:-8.8.8.8}"
-export GATEWAY_URL="${GATEWAY_URL:-http://localhost:8000}"
-export MIDDLEWARE_URL="${MIDDLEWARE_URL:-http://localhost:8080}"
+export GATEWAY_URL="${GATEWAY_URL:-http://ibor-ai-gateway.railway.internal:8000}"
+export MIDDLEWARE_URL="${MIDDLEWARE_URL:-https://ibor-middleware-production.up.railway.app}"
 export PORT="${PORT:-5173}"
 envsubst '${GATEWAY_URL} ${MIDDLEWARE_URL} ${PORT} ${RESOLVER}' \
   < /etc/nginx/conf.d/default.conf.template \
