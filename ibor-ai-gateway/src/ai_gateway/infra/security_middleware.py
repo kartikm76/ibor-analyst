@@ -49,11 +49,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # 1. API KEY CHECK
-        # Railway private network uses 100.64.x.x (Tailscale CGNAT) — trust these directly.
-        # Public traffic arrives via Fastly CDN with non-100.64 IPs and must present the key.
-        raw_ip = request.client.host if request.client else "unknown"
-        is_private_network = raw_ip.startswith("100.64.")
-        if settings.api_key and not is_private_network:
+        # Always check the API key — nginx already injects X-API-Key for internal traffic,
+        # so the IP-based bypass is unnecessary and was broken (Railway's ingress always
+        # appears as 100.64.* regardless of whether the caller is internal or external).
+        if settings.api_key:
             request_key = request.headers.get("X-API-Key", "")
             if request_key != settings.api_key:
                 return JSONResponse(
