@@ -72,9 +72,12 @@ server {
     }
 
     location /api/ {
-        # Private network — variable forces per-request DNS via resolver above
+        # Variable forces per-request DNS lookup via resolver above.
+        # proxy_ssl_server_name on: sends SNI when MIDDLEWARE_URL is https://*.
         set $middleware_url ${MIDDLEWARE_URL};
         proxy_pass $middleware_url;
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
