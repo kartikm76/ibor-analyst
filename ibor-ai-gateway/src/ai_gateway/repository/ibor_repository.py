@@ -20,6 +20,7 @@ class IborRepository:
             timeout=15.0,
             verify=settings.verify_ssl,
             limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+            headers={"X-API-Key": settings.api_key} if settings.api_key else {},
         )
 
     @property
