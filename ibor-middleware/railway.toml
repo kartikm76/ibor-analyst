@@ -1,7 +1,6 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
-watchPatterns = ["ibor-middleware/**"]
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
