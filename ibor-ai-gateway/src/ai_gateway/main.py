@@ -12,6 +12,7 @@ from ai_gateway.repository.ibor_repository import IborRepository
 from ai_gateway.service.ibor_service import IborService
 from ai_gateway.service.llm_service import LlmService
 from ai_gateway.service.instrument_resolver import InstrumentResolver
+from ai_gateway.service.llama_guard_service import LlamaGuardService
 from ai_gateway.service.market_tools import MarketTools
 from ai_gateway.service.conversation_service import ConversationService
 from ai_gateway.service.quota_service import QuotaService
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
     service = IborService(client=ibor_repository)
     anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
     market_tools = MarketTools()
+    llama_guard = LlamaGuardService(api_key=settings.groq_api_key or None)
 
     # Initialize database pool and conversation service
     pg_config = PgPoolConfig(dsn=settings.pg_dsn)
@@ -51,6 +53,7 @@ def create_app() -> FastAPI:
         market_tools=market_tools,
         resolver=instrument_resolver,
         model=settings.anthropic_model,
+        llama_guard=llama_guard,
     )
 
     # Initialize quota service

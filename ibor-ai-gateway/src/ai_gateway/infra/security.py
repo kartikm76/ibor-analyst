@@ -96,21 +96,12 @@ class InputValidator:
         if len(question) > settings.max_question_length:
             return False, f"Question too long (max {settings.max_question_length} characters)."
 
-        # Banned keywords
+        # Banned keywords (configurable via BANNED_KEYWORDS env var)
         if settings.banned_keywords:
             q_lower = question.lower()
             for keyword in settings.banned_keywords:
                 if keyword.strip().lower() in q_lower:
                     return False, f"Question contains prohibited keyword: '{keyword}'."
-
-        # Basic SQL injection / script injection patterns
-        dangerous_patterns = [
-            r"(drop|delete|truncate|exec|execute|script|javascript|onload)\s*\(",
-            r"(union|select|from|where)\s+(select|from|where)",  # SQL injection
-        ]
-        for pattern in dangerous_patterns:
-            if re.search(pattern, question, re.IGNORECASE):
-                return False, "Question contains potentially malicious patterns."
 
         return True, None
 

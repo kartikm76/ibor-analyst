@@ -19,6 +19,7 @@ class Settings:
     # ── Secrets (required) ───────────────────────────────────────────────────
     anthropic_api_key: str  = os.getenv("ANTHROPIC_API_KEY", "")
     pg_dsn: str             = os.getenv("PG_DSN", "postgresql://ibor:ibor@localhost:5432/ibor")
+    groq_api_key: str       = os.getenv("GROQ_API_KEY", "")
 
     # ── LLM ─────────────────────────────────────────────────────────────────
     anthropic_model: str    = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")

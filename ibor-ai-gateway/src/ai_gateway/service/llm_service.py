@@ -12,6 +12,7 @@ from anthropic import AsyncAnthropic
 from ai_gateway.model.schemas import IborAnswer
 from ai_gateway.service.ibor_service import IborService
 from ai_gateway.service.instrument_resolver import InstrumentResolver
+from ai_gateway.service.llama_guard_service import LlamaGuardService
 from ai_gateway.service.market_tools import MarketTools
 
 log = logging.getLogger(__name__)
@@ -218,12 +219,14 @@ class LlmService:
         market_tools: MarketTools,
         resolver: Optional[InstrumentResolver] = None,
         model: Optional[str] = None,
+        llama_guard: Optional[LlamaGuardService] = None,
     ) -> None:
         self._anthropic = anthropic_client
         self._service = service
         self._market = market_tools
         self._resolver = resolver
         self._model = model or "claude-sonnet-4-6"
+        self._llama_guard = llama_guard
 
     async def summarize(self, verbose_text: str) -> dict:
         """Compress verbose analysis into bullet-point summary."""
@@ -295,7 +298,20 @@ class LlmService:
     async def chat(self, question: str, market_contents: bool = True) -> IborAnswer:
         today = date.today()
 
-        # ── Step 0: guardrail ─────────────────────────────────────────────
+        # ── Step 0a: Llama Guard — prompt injection / jailbreak / unsafe content ──
+        if self._llama_guard:
+            is_safe, reason = await self._llama_guard.check(question)
+            if not is_safe:
+                return IborAnswer(
+                    question=question,
+                    as_of=today,
+                    summary=(
+                        f"I can't process that request ({reason}). "
+                        "Please ask a question about your portfolio, positions, P&L, or market data."
+                    ),
+                )
+
+        # ── Step 0b: Claude guardrail — domain classifier ─────────────────
         guard = await self._classify_question(question)
         category = guard.get("category", "proceed")
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class QuotaStatus(BaseModel):
@@ -64,7 +64,12 @@ class PnLRequest(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    question: str
-    portfolio_code: Optional[str] = None
-    as_of: Optional[date] = None  # Optional as_of date (defaults to today)
-    market_contents: Optional[bool] = True  # whether to fetch yfinance + market data
+    question: str = Field(min_length=10, max_length=2000)
+    portfolio_code: Optional[str] = Field(default=None, pattern=r"^[A-Z0-9\-_]{1,20}$")
+    as_of: Optional[date] = None
+    market_contents: Optional[bool] = True
+
+    @field_validator("question")
+    @classmethod
+    def strip_question(cls, v: str) -> str:
+        return v.strip()
