@@ -336,7 +336,7 @@ class ConversationService:
         context_id: str,
         analyst_id: str,
         top_k: int = 3,
-        min_similarity: float = 0.6,
+        min_similarity: float = 0.5,
     ) -> List[Dict[str, Any]]:
         """Embed the current question and retrieve the most similar past Q&A summaries.
 

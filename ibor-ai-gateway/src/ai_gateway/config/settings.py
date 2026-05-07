@@ -35,6 +35,10 @@ class Settings:
         else ["http://localhost:4200", "http://localhost:5173", "localhost", "127.0.0.1"]
     )
 
+    # ── RAG / Conversation Memory ────────────────────────────────────────────
+    rag_min_similarity: float = float(os.getenv("RAG_MIN_SIMILARITY", "0.4"))
+    rag_top_k: int            = int(os.getenv("RAG_TOP_K", "3"))
+
     # ── Security ─────────────────────────────────────────────────────────────
     environment: str                    = os.getenv("ENVIRONMENT", "development")
     api_key: str                        = os.getenv("API_KEY", "")

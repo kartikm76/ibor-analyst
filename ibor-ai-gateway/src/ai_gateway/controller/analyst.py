@@ -2,6 +2,7 @@ from __future__ import annotations
 from uuid import uuid4, UUID
 from datetime import date
 from fastapi import APIRouter, HTTPException, Request
+from ai_gateway.config.settings import settings
 from ai_gateway.model.schemas import (
     ChatRequest, IborAnswer, PnLRequest, PositionsRequest, PricesRequest, TradesRequest, QuotaStatus,
 )
@@ -128,6 +129,8 @@ def make_analyst_router(
                     context_type="portfolio",
                     context_id=portfolio_code,
                     analyst_id=analyst_id,
+                    top_k=settings.rag_top_k,
+                    min_similarity=settings.rag_min_similarity,
                 )
 
             # Call LLM to generate response
