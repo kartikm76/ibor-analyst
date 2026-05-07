@@ -67,8 +67,8 @@ public class JodiPositionCompositionRepository {
                     JOIN ibor.dim_price_source dps ON dps.price_source_vid = fp.price_source_vid
                     WHERE fp.price_ts <= (?::date + time '23:59:59')  -- 8
                     ORDER BY fp.instrument_vid,
-                             (dps.price_source_code = 'BBG') DESC,
-                             fp.price_ts DESC
+                             fp.price_ts DESC,
+                             (dps.price_source_code = 'BBG') DESC
                     ),
                     mult AS (
                         SELECT i.instrument_vid,
