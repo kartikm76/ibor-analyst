@@ -28,8 +28,14 @@ echo ""
 
 cd "$ROOT"
 
-# Start all services (docker-compose handles the dependency chain)
-info "Building images and starting containers..."
+# Build only the three services that contain application source code.
+# ibor-postgres and ibor-bootstrap are infrastructure — they change rarely
+# and don't need rebuilding on every start.
+# Docker layer cache makes this fast when source hasn't changed.
+info "Building application images..."
+docker-compose build ibor-ai-gateway ibor-middleware ibor-ui
+
+info "Starting containers..."
 docker-compose up -d
 
 echo ""

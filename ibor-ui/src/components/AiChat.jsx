@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { MIN_VALID_WORDS, MAX_LINES_COLLAPSED } from '../config/chatConfig'
 
 const GREETING = "Ask me about positions, trades, P&L, and market data."
-const MAX_LINES_COLLAPSED = 30
 
 function ThinkingDots() {
   return (
@@ -114,9 +114,9 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
     const question = input.trim()
     if (!question || sending) return
 
-    // Reject garbage input — must have at least 2 real English words
+    // Reject garbage input — must have at least MIN_VALID_WORDS real English words
     const words = question.split(/\s+/).filter(w => /^[a-zA-Z$]{2,}$/.test(w))
-    if (words.length < 2) {
+    if (words.length < MIN_VALID_WORDS) {
       const userMsgId = nextId.current++
       const t = Date.now()
       setMessages(prev => [
@@ -310,7 +310,7 @@ const fmtUsd = v => new Intl.NumberFormat('en-US', {
  */
 function formatConciseResponse(summary, positions, totalAum, question) {
   try {
-    const tickers = extractTickersFromQuestion(question)
+    const tickers = extractTickersFromQuestion(question, positions)
     let relevantPositions = positions || []
 
     if (tickers.length > 0) {
@@ -377,7 +377,7 @@ function formatContextResponse(summary, positions, question) {
     text = text.replace(/\*\*/g, '')
 
     const lines = []
-    const tickers = extractTickersFromQuestion(question)
+    const tickers = extractTickersFromQuestion(question, positions)
 
     // Always lead with verified data from local positions
     let relevant = []
@@ -438,11 +438,19 @@ function formatContextResponse(summary, positions, question) {
   }
 }
 
-function extractTickersFromQuestion(question) {
+function extractTickersFromQuestion(question, positions) {
   if (!question) return []
-  const matches = question.match(/(\b[A-Z]{1,6}\b)/g) || []
-  const exclude = ['THE', 'AND', 'FOR', 'WITH', 'FROM', 'THIS', 'THAT', 'HAVE',
-    'ABOUT', 'PORTFOLIO', 'POSITION', 'IBOR', 'AUM', 'ETF', 'HOW', 'GET',
-    'ALL', 'SHOW', 'WHAT', 'TELL', 'GIVE', 'LIST', 'MY', 'HAS', 'ARE', 'NOT']
-  return [...new Set(matches)].filter(t => !exclude.includes(t)).slice(0, 10)
+  // Only return uppercase words that actually exist in the portfolio.
+  // This eliminates the need for any exclude list — macro terms like VIX, FED,
+  // ECB etc. are naturally ignored because they are not holdings.
+  const portfolioSymbols = new Set(
+    (positions || []).flatMap(p => [
+      (p.instrumentId || p.instrument || '').toUpperCase(),
+      (p.instrumentName || '').toUpperCase(),
+    ]).filter(Boolean)
+  )
+  const matches = question.match(/(\b[A-Z]{2,6}\b)/g) || []
+  return [...new Set(matches)].filter(t =>
+    [...portfolioSymbols].some(sym => sym.includes(t))
+  ).slice(0, 10)
 }

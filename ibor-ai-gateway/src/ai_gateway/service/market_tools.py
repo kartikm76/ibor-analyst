@@ -7,13 +7,9 @@ from datetime import datetime, timedelta
 
 import yfinance as yf
 
-log = logging.getLogger(__name__)
+from ai_gateway.config.settings import settings
 
-_MACRO_TICKERS: Dict[str, str] = {
-    "sp500": "^GSPC",
-    "vix": "^VIX",
-    "us_10y_yield": "^TNX",
-}
+log = logging.getLogger(__name__)
 
 
 class MarketTools:
@@ -164,7 +160,7 @@ class MarketTools:
 
     def _macro_sync(self) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
-        for name, sym in _MACRO_TICKERS.items():
+        for name, sym in settings.macro_tickers.items():
             try:
                 info = yf.Ticker(sym).info or {}
                 result[name] = info.get("regularMarketPrice") or info.get("currentPrice")

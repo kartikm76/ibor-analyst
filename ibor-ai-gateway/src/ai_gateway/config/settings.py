@@ -35,6 +35,22 @@ class Settings:
         else ["http://localhost:4200", "http://localhost:5173", "localhost", "127.0.0.1"]
     )
 
+    # ── Market data ──────────────────────────────────────────────────────────
+    # Comma-separated name:yfinance_symbol pairs.
+    # Override via MACRO_TICKERS env var to add/remove tickers without a code change.
+    _default_macro_tickers = (
+        "sp500:^GSPC,vix:^VIX,"
+        "us_2y_yield:^IRX,"   # 13-week T-bill — best short-end proxy in yfinance
+        "us_5y_yield:^FVX,"
+        "us_10y_yield:^TNX,"
+        "us_30y_yield:^TYX"
+    )
+    macro_tickers: dict[str, str] = {
+        pair.split(":")[0]: pair.split(":")[1]
+        for pair in os.getenv("MACRO_TICKERS", _default_macro_tickers).split(",")
+        if ":" in pair
+    }
+
     # ── RAG / Conversation Memory ────────────────────────────────────────────
     rag_min_similarity: float = float(os.getenv("RAG_MIN_SIMILARITY", "0.4"))
     rag_top_k: int            = int(os.getenv("RAG_TOP_K", "3"))
