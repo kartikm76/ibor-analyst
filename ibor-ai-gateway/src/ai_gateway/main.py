@@ -31,7 +31,6 @@ from ai_gateway.controller.health import router as health_router
 from ai_gateway.controller.analyst import make_analyst_router
 from ai_gateway.controller import conversation_test
 from ai_gateway.controller import scheduler_test
-from ai_gateway.controller import admin as admin_controller
 from ai_gateway.infra.security_middleware import SecurityMiddleware, InputValidationMiddleware, QuotaCheckMiddleware
 
 
@@ -108,13 +107,11 @@ def create_app() -> FastAPI:
     # Wire services to controllers
     conversation_test.conversation_service = conversation_service
     scheduler_test.scheduler = embedding_scheduler
-    admin_controller.pg_pool = pg_pool
 
     app.include_router(health_router, tags=["health"])
     app.include_router(make_analyst_router(service, llm_service, conversation_service, quota_service))
     app.include_router(conversation_test.router)
     app.include_router(scheduler_test.router)
-    app.include_router(admin_controller.router)
 
     @app.get("/", include_in_schema=False)
     def root():
