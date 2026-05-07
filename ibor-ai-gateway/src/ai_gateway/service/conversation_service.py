@@ -16,12 +16,14 @@ All conversation data is isolated per analyst.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import json
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import psycopg
+from ai_gateway.service import embedding_service
 
 
 log = logging.getLogger(__name__)
@@ -287,19 +289,45 @@ class ConversationService:
         context_id: str,
         analyst_id: str
     ) -> None:
-        """Summarize delta, embed via OpenAI, store in pgvector.
+        """Summarize conversation delta, embed with all-MiniLM-L6-v2, store in pgvector.
 
-        Called by 5-minute background scheduler.
-
-        Args:
-            conversation_id: UUID
-            context_type: "portfolio", "instrument", etc.
-            context_id: "P-ALPHA", "EQ-AAPL", etc.
-            analyst_id: User identifier
+        Called by the 5-minute background scheduler for every conversation
+        with pending_embedding = true.
         """
-        # Embeddings disabled — no-op until a real provider is configured
-        log.debug(f"embed_and_store: skipped (embedding provider disabled) for {conversation_id}")
-        return
+        try:
+            delta = await self.extract_delta(conversation_id)
+            if not delta.strip():
+                log.debug("embed_and_store: no delta for %s", conversation_id)
+                return
+
+            summary = await self._summarize_text_via_openai(delta)
+            vector = await asyncio.to_thread(embedding_service.embed, summary)
+
+            with self._pool.connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO conv.conversation_embedding
+                            (conversation_id, analyst_id, context_type, context_id,
+                             conversation_summary, embedding, embedding_model)
+                        VALUES (%s, %s, %s, %s, %s, %s::vector, %s)
+                        """,
+                        (conversation_id, analyst_id, context_type, context_id,
+                         summary, vector, "all-MiniLM-L6-v2"),
+                    )
+                    cur.execute(
+                        """
+                        UPDATE conv.conversation
+                        SET pending_embedding = false,
+                            last_embedding_checkpoint = now()
+                        WHERE conversation_id = %s
+                        """,
+                        (conversation_id,),
+                    )
+            log.info("embed_and_store: stored embedding for conversation %s", conversation_id)
+
+        except Exception as e:
+            log.error("embed_and_store failed for %s: %s", conversation_id, e)
 
     async def search_similar_conversations(
         self,
@@ -307,33 +335,57 @@ class ConversationService:
         context_type: str,
         context_id: str,
         analyst_id: str,
-        top_k: int = 3
+        top_k: int = 3,
+        min_similarity: float = 0.6,
     ) -> List[Dict[str, Any]]:
-        """Find similar past conversations via pgvector semantic search.
+        """Embed the current question and retrieve the most similar past Q&A summaries.
 
-        Used to provide Claude with context from similar past analyses.
+        Results are filtered by analyst and context so one user never sees
+        another user's portfolio conversations.
 
-        Args:
-            query: Current question (e.g., "Why am I concentrated in tech?")
-            context_type: Filter to same context type ("portfolio")
-            context_id: Filter to same context_id ("P-ALPHA")
-            analyst_id: Filter to same analyst (isolation)
-            top_k: Number of results to return (default 3)
-
-        Returns:
-            [
-                {
-                    "conversation_id": UUID,
-                    "summary": "...",
-                    "similarity_score": 0.85,
-                    "created_at": datetime
-                },
-                ...
-            ]
+        Returns top_k results with similarity >= min_similarity (cosine distance
+        converted to similarity score: 1 - distance).
         """
-        # Embeddings disabled — returns empty until a real provider is configured
-        log.debug("search_similar_conversations: skipped (embedding provider disabled)")
-        return []
+        try:
+            vector = await asyncio.to_thread(embedding_service.embed, query)
+
+            with self._pool.connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT
+                            conversation_summary,
+                            created_at,
+                            1 - (embedding <=> %s::vector) AS similarity_score
+                        FROM conv.conversation_embedding
+                        WHERE analyst_id = %s
+                          AND context_type = %s
+                          AND context_id   = %s
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT %s
+                        """,
+                        (vector, analyst_id, context_type, context_id, vector, top_k),
+                    )
+                    rows = cur.fetchall()
+
+            results = [
+                {
+                    "summary": row["conversation_summary"],
+                    "similarity_score": float(row["similarity_score"]),
+                    "created_at": row["created_at"],
+                }
+                for row in rows
+                if float(row["similarity_score"]) >= min_similarity
+            ]
+            log.info(
+                "search_similar_conversations: %d results (threshold=%.2f) for query=%.60s",
+                len(results), min_similarity, query,
+            )
+            return results
+
+        except Exception as e:
+            log.warning("search_similar_conversations failed: %s — returning empty", e)
+            return []
 
     # ────────────────────────────────────────────────────────────────
     # HELPERS

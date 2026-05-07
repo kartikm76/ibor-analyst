@@ -68,6 +68,7 @@ class ChatRequest(BaseModel):
     portfolio_code: Optional[str] = Field(default=None, pattern=r"^[A-Z0-9\-_]{1,20}$")
     as_of: Optional[date] = None
     market_contents: Optional[bool] = True
+    session_id: Optional[str] = Field(default=None, description="Stable browser session UUID for conversation memory")
 
     @field_validator("question")
     @classmethod

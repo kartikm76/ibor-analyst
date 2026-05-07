@@ -1,5 +1,5 @@
 from __future__ import annotations
-from uuid import uuid4
+from uuid import uuid4, UUID
 from datetime import date
 from fastapi import APIRouter, HTTPException, Request
 from ai_gateway.model.schemas import (
@@ -80,10 +80,11 @@ def make_analyst_router(
             if x_forwarded := request.headers.get("X-Forwarded-For"):
                 client_ip = x_forwarded.split(",")[0].strip()
 
-            # Auto-capture context (behind-the-scenes)
             portfolio_code = body.portfolio_code or "P-ALPHA"
-            analyst_id = client_ip  # Use IP as analyst_id for quota tracking
-            session_id = str(uuid4())  # Auto-generate fresh session per request
+            analyst_id = client_ip
+            # Use session_id sent by the browser (stable across questions in a session)
+            # Fall back to a new UUID only if the client didn't send one
+            session_id = body.session_id or str(uuid4())
             market_contents = body.market_contents if body.market_contents is not None else True
 
             # Check quota BEFORE processing (if quota service available)
@@ -119,10 +120,21 @@ def make_analyst_router(
                     content=body.question
                 )
 
-            # Call LLM to generate response (pass market_contents flag)
+            # Retrieve similar past conversations for context injection
+            prior_context = []
+            if conversation_service:
+                prior_context = await conversation_service.search_similar_conversations(
+                    query=body.question,
+                    context_type="portfolio",
+                    context_id=portfolio_code,
+                    analyst_id=analyst_id,
+                )
+
+            # Call LLM to generate response
             response = await agent.chat(
                 question=body.question,
-                market_contents=market_contents
+                market_contents=market_contents,
+                prior_context=prior_context,
             )
 
             # Save AI response to conversation

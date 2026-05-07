@@ -65,6 +65,7 @@ Write a 4-8 sentence analyst-grade response that:
 Rules:
 - IBOR numbers are gospel — never contradict them.
 - Market data enriches, it does not override.
+- If prior_context is present, reference relevant past analysis naturally (e.g. "As we discussed previously..."). Do not fabricate past conversations that are not in the context.
 - Flowing analyst prose — no bullet points, no headers.
 - Be direct and confident; the reader is a professional who manages money.
 - If any data is missing or a tool failed, mention it once briefly and continue.
@@ -295,7 +296,7 @@ class LlmService:
             data={"market": market_context},
         )
 
-    async def chat(self, question: str, market_contents: bool = True) -> IborAnswer:
+    async def chat(self, question: str, market_contents: bool = True, prior_context: list = None) -> IborAnswer:
         today = date.today()
 
         # ── Step 0a: Llama Guard — prompt injection / jailbreak / unsafe content ──
@@ -371,7 +372,7 @@ class LlmService:
             if isinstance(result, IborAnswer) and result.clarification:
                 return IborAnswer(question=question, as_of=today, clarification=result.clarification)
 
-        return await self._synthesize(question, today, ibor_calls, ibor_results, market_context, market_contents)
+        return await self._synthesize(question, today, ibor_calls, ibor_results, market_context, market_contents, prior_context or [])
 
     # ── Instrument resolution ─────────────────────────────────────────────
 
@@ -506,6 +507,7 @@ class LlmService:
         ibor_results: List,
         market_context: Dict[str, Any],
         market_contents: bool = True,
+        prior_context: List[Dict] = None,
     ) -> IborAnswer:
         ibor_data: Dict[str, Any] = {}
         gaps: List[str] = []
@@ -526,6 +528,13 @@ class LlmService:
             "ibor_data": ibor_data,
             "market_context": market_context,
         }
+
+        if prior_context:
+            payload["prior_context"] = [
+                {"summary": c["summary"], "similarity": round(c["similarity_score"], 2)}
+                for c in prior_context
+            ]
+            log.info("Injecting %d prior conversation(s) into synthesis context", len(prior_context))
 
         # Use appropriate synthesis prompt based on market_contents flag
         synthesis_prompt = _SYNTHESIS_SYSTEM_WITH_MARKET if market_contents else _SYNTHESIS_SYSTEM_IBOR_ONLY

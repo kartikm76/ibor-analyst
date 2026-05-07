@@ -78,6 +78,19 @@ function MessageBubble({ message }) {
   )
 }
 
+// Stable session ID: generated once per page load, persisted in sessionStorage
+function getOrCreateSessionId() {
+  const key = 'ibor_session_id'
+  let id = sessionStorage.getItem(key)
+  if (!id) {
+    id = crypto.randomUUID()
+    sessionStorage.setItem(key, id)
+  }
+  return id
+}
+
+const SESSION_ID = getOrCreateSessionId()
+
 export default function AiChat({ onAnswer, useContext, onContextChange, positions, totalAum }) {
   const [messages, setMessages] = useState([
     { id: 1, role: 'assistant', content: GREETING, timestamp: Date.now() }
@@ -134,7 +147,8 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
         {
           question,
           portfolio_code: 'P-ALPHA',
-          market_contents: marketContents
+          market_contents: marketContents,
+          session_id: SESSION_ID,
         },
         { headers: { 'Content-Type': 'application/json' } }
       )

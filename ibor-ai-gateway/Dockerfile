@@ -19,6 +19,9 @@ COPY . .
 # Install dependencies using pip directly from pyproject.toml
 RUN pip install --no-cache-dir -e .
 
+# Pre-download embedding model so container starts fast (no cold-download on first request)
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding('sentence-transformers/all-MiniLM-L6-v2')"
+
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
