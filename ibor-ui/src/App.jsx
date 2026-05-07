@@ -111,7 +111,7 @@ function VerticalDivider({ onDrag }) {
   )
 }
 
-const DEFAULT_AS_OF = '2026-03-19'  // Data available for this date
+const DEFAULT_AS_OF = new Date().toISOString().slice(0, 10)
 const DEFAULT_PORTFOLIO = 'P-ALPHA'
 
 export default function App() {
