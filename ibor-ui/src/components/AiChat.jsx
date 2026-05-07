@@ -140,6 +140,8 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
     setInput('')
     setSending(true)
 
+    let streamedText = ''
+
     try {
       const response = await fetch('/analyst/chat', {
         method: 'POST',
@@ -159,7 +161,6 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
-      let streamedText = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -171,43 +172,42 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
+          let chunk
           try {
-            const chunk = JSON.parse(line.slice(6))
+            chunk = JSON.parse(line.slice(6))
+          } catch {
+            continue // malformed SSE line — skip
+          }
 
-            if (chunk.type === 'text') {
-              streamedText += chunk.content
-              // Update bubble incrementally with raw streamed text
-              setMessages(prev =>
-                prev.map(m =>
-                  m.id === thinkingMsgId
-                    ? { ...m, content: streamedText, thinking: false }
-                    : m
-                )
+          if (chunk.type === 'text') {
+            streamedText += chunk.content
+            setMessages(prev =>
+              prev.map(m =>
+                m.id === thinkingMsgId
+                  ? { ...m, content: streamedText, thinking: false }
+                  : m
               )
-            } else if (chunk.type === 'done') {
-              if (chunk.quota_status) setQuotaStatus(chunk.quota_status)
+            )
+          } else if (chunk.type === 'done') {
+            if (chunk.quota_status) setQuotaStatus(chunk.quota_status)
 
-              // Final format pass once full text is available
-              const summary = chunk.summary || streamedText || '(No response)'
-              let formatted = summary
-              if (!useContext) {
-                formatted = formatConciseResponse(summary, positions, totalAum, question)
-              } else {
-                formatted = formatContextResponse(summary, positions, question)
-              }
-              setMessages(prev =>
-                prev.map(m =>
-                  m.id === thinkingMsgId
-                    ? { ...m, content: formatted, thinking: false, timestamp: Date.now() }
-                    : m
-                )
-              )
-              if (onAnswer) onAnswer(chunk)
-            } else if (chunk.type === 'error') {
-              throw new Error(chunk.detail || 'Stream error')
+            const summary = chunk.summary || streamedText || '(No response)'
+            let formatted = summary
+            if (!useContext) {
+              formatted = formatConciseResponse(summary, positions, totalAum, question)
+            } else {
+              formatted = formatContextResponse(summary, positions, question)
             }
-          } catch (parseErr) {
-            // Malformed SSE line — skip
+            setMessages(prev =>
+              prev.map(m =>
+                m.id === thinkingMsgId
+                  ? { ...m, content: formatted, thinking: false, timestamp: Date.now() }
+                  : m
+              )
+            )
+            if (onAnswer) onAnswer(chunk)
+          } else if (chunk.type === 'error') {
+            throw new Error(chunk.detail || 'Stream error')
           }
         }
       }
@@ -221,6 +221,14 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
       )
     } finally {
       setSending(false)
+      // Clear any thinking bubble that never got a done/error chunk
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === thinkingMsgId && m.thinking
+            ? { ...m, content: streamedText || '(No response)', thinking: false, timestamp: Date.now() }
+            : m
+        )
+      )
     }
   }
 

@@ -713,10 +713,22 @@ def _collate_market(
             log.warning("market task %s/%s failed: %s", label, ticker, result)
             continue
         if label == "macro":
-            context["macro"] = result
+            context["macro"] = _sanitize_floats(result)
         else:
-            context["by_ticker"].setdefault(ticker, {})[label] = result
+            context["by_ticker"].setdefault(ticker, {})[label] = _sanitize_floats(result)
     return context
+
+
+def _sanitize_floats(obj: Any) -> Any:
+    """Replace NaN/Inf with None so json.dumps produces valid JSON."""
+    import math
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    if isinstance(obj, dict):
+        return {k: _sanitize_floats(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_floats(v) for v in obj]
+    return obj
 
 
 # Summarizer prompt
