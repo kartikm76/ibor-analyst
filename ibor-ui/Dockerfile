@@ -66,9 +66,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
         proxy_connect_timeout 10s;
-        proxy_buffer_size 128k;
-        proxy_buffers 4 256k;
-        proxy_busy_buffers_size 256k;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_http_version 1.1;
     }
 
     location /api/ {
