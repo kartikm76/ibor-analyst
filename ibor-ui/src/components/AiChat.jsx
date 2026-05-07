@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react'
-import axios from 'axios'
 
 const GREETING = "Ask me about positions, trades, P&L, and market data."
 const MAX_LINES_COLLAPSED = 30
@@ -142,52 +141,81 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
     setSending(true)
 
     try {
-      const { data } = await axios.post(
-        '/analyst/chat',
-        {
+      const response = await fetch('/analyst/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           question,
           portfolio_code: 'P-ALPHA',
           market_contents: marketContents,
           session_id: SESSION_ID,
-        },
-        { headers: { 'Content-Type': 'application/json' } }
-      )
+        }),
+      })
 
-      // Capture quota status from response
-      if (data.quota_status) {
-        setQuotaStatus(data.quota_status)
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`)
       }
 
-      let summary = data.summary || '(No response)'
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let streamedText = ''
 
-      // Format: concise data-driven answer, with AI narrative trimmed
-      if (!useContext) {
-        summary = formatConciseResponse(summary, positions, totalAum, question)
-      } else {
-        summary = formatContextResponse(summary, positions, question)
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const chunk = JSON.parse(line.slice(6))
+
+            if (chunk.type === 'text') {
+              streamedText += chunk.content
+              // Update bubble incrementally with raw streamed text
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === thinkingMsgId
+                    ? { ...m, content: streamedText, thinking: false }
+                    : m
+                )
+              )
+            } else if (chunk.type === 'done') {
+              if (chunk.quota_status) setQuotaStatus(chunk.quota_status)
+
+              // Final format pass once full text is available
+              const summary = chunk.summary || streamedText || '(No response)'
+              let formatted = summary
+              if (!useContext) {
+                formatted = formatConciseResponse(summary, positions, totalAum, question)
+              } else {
+                formatted = formatContextResponse(summary, positions, question)
+              }
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === thinkingMsgId
+                    ? { ...m, content: formatted, thinking: false, timestamp: Date.now() }
+                    : m
+                )
+              )
+              if (onAnswer) onAnswer(chunk)
+            } else if (chunk.type === 'error') {
+              throw new Error(chunk.detail || 'Stream error')
+            }
+          } catch (parseErr) {
+            // Malformed SSE line — skip
+          }
+        }
       }
-
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === thinkingMsgId
-            ? { ...m, content: summary, thinking: false, timestamp: Date.now() }
-            : m
-        )
-      )
-
-      if (onAnswer) onAnswer(data)
     } catch (err) {
-      const errMsg = err?.response?.data?.detail || err.message || 'An error occurred.'
-
-      // Capture quota status from error response too
-      if (err?.response?.data?.quota_status) {
-        setQuotaStatus(err.response.data.quota_status)
-      }
-
       setMessages(prev =>
         prev.map(m =>
           m.id === thinkingMsgId
-            ? { ...m, content: `${errMsg}`, thinking: false, timestamp: Date.now() }
+            ? { ...m, content: err.message || 'An error occurred.', thinking: false, timestamp: Date.now() }
             : m
         )
       )

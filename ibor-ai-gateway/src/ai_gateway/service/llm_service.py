@@ -374,6 +374,130 @@ class LlmService:
 
         return await self._synthesize(question, today, ibor_calls, ibor_results, market_context, market_contents, prior_context or [])
 
+    async def chat_stream(self, question: str, market_contents: bool = True, prior_context: list = None):
+        """Streaming variant of chat(). Yields SSE-ready dicts:
+            {"type": "text",  "content": "<chunk>"}   — one per token
+            {"type": "done",  "summary": "...", "data": {...}, "gaps": [...]}  — final
+            {"type": "error", "detail": "..."}         — on failure
+        Steps 0-2 (guard, intent, fan-out) are identical to chat().
+        Only synthesis streams.
+        """
+        today = date.today()
+
+        try:
+            if self._llama_guard:
+                is_safe, reason = await self._llama_guard.check(question)
+                if not is_safe:
+                    msg = (f"I can't process that request ({reason}). "
+                           "Please ask a question about your portfolio, positions, P&L, or market data.")
+                    yield {"type": "text", "content": msg}
+                    yield {"type": "done", "summary": msg, "data": {}, "gaps": []}
+                    return
+
+            guard = await self._classify_question(question)
+            category = guard.get("category", "proceed")
+
+            if category == "reject":
+                yield {"type": "text", "content": _OFF_TOPIC_MESSAGE}
+                yield {"type": "done", "summary": _OFF_TOPIC_MESSAGE, "data": {}, "gaps": []}
+                return
+
+            if category == "market_only" and market_contents:
+                result = await self._handle_market_only(question, today)
+                yield {"type": "text", "content": result.summary or ""}
+                yield {"type": "done", "summary": result.summary, "data": result.data, "gaps": result.gaps}
+                return
+
+            plan = await self._parse_intent(question, today, market_contents)
+            ibor_calls: List[Dict[str, Any]] = plan.get("ibor_calls", [])
+            explicit_tickers: List[str] = [t.upper() for t in plan.get("explicit_tickers", [])]
+            needs_macro: bool = plan.get("needs_macro", False) if not market_contents else plan.get("needs_macro", True)
+
+            if not ibor_calls:
+                api_error = plan.get("_error")
+                gaps = [f"Anthropic API error: {api_error}"] if api_error else [
+                    "Could not determine what IBOR data to fetch for this question."
+                ]
+                yield {"type": "done", "summary": "", "data": {}, "gaps": gaps}
+                return
+
+            ibor_coros = [self._dispatch_ibor(c["tool"], c.get("args", {}), today) for c in ibor_calls]
+            market_context: Dict[str, Any] = {}
+
+            if market_contents:
+                if explicit_tickers:
+                    market_labels, market_coros = self._build_market_coros(explicit_tickers, needs_macro)
+                    all_results = await asyncio.gather(*ibor_coros, *market_coros, return_exceptions=True)
+                    ibor_results = list(all_results[:len(ibor_coros)])
+                    market_raw = list(all_results[len(ibor_coros):])
+                else:
+                    ibor_results = list(await asyncio.gather(*ibor_coros, return_exceptions=True))
+                    tickers = _extract_equity_tickers(ibor_results)
+                    market_labels, market_coros = self._build_market_coros(tickers, needs_macro)
+                    market_raw = list(await asyncio.gather(*market_coros, return_exceptions=True)) if market_coros else []
+                market_context = _collate_market(market_labels, market_raw)
+            else:
+                ibor_results = list(await asyncio.gather(*ibor_coros, return_exceptions=True))
+
+            for result in ibor_results:
+                if isinstance(result, IborAnswer) and result.clarification:
+                    msg = result.clarification
+                    yield {"type": "text", "content": msg}
+                    yield {"type": "done", "summary": msg, "data": {}, "gaps": []}
+                    return
+
+            # ── Streaming synthesis ───────────────────────────────────────
+            ibor_data: Dict[str, Any] = {}
+            gaps: List[str] = []
+            for call, result in zip(ibor_calls, ibor_results):
+                tool = call["tool"]
+                if isinstance(result, Exception):
+                    gaps.append(f"{tool} failed: {result}")
+                elif isinstance(result, IborAnswer):
+                    gaps.extend(result.gaps)
+                    ibor_data[tool] = result.data
+                else:
+                    gaps.append(f"{tool} returned unexpected type")
+
+            payload = {
+                "question": question,
+                "as_of": str(today),
+                "ibor_data": ibor_data,
+                "market_context": market_context,
+            }
+            if prior_context:
+                payload["prior_context"] = [
+                    {"summary": c["summary"], "similarity": round(c["similarity_score"], 2)}
+                    for c in prior_context
+                ]
+                log.info("Injecting %d prior conversation(s) into synthesis context", len(prior_context))
+
+            synthesis_prompt = _SYNTHESIS_SYSTEM_WITH_MARKET if market_contents else _SYNTHESIS_SYSTEM_IBOR_ONLY
+            full_text = ""
+
+            async with self._anthropic.messages.stream(
+                model=self._model,
+                max_tokens=2048,
+                system=synthesis_prompt.format(today=today),
+                messages=[{"role": "user", "content": json.dumps(payload)}],
+            ) as stream:
+                async for text in stream.text_stream:
+                    full_text += text
+                    yield {"type": "text", "content": text}
+
+            first_ok = next((r for r in ibor_results if isinstance(r, IborAnswer) and not r.gaps), None)
+            yield {
+                "type": "done",
+                "summary": full_text,
+                "data": {"ibor": ibor_data, "market": market_context},
+                "gaps": gaps,
+                "as_of": str(first_ok.as_of if first_ok else today),
+            }
+
+        except Exception as e:
+            log.error("chat_stream error: %s", e)
+            yield {"type": "error", "detail": str(e)}
+
     # ── Instrument resolution ─────────────────────────────────────────────
 
     def _resolve_instrument(self, raw_code: str, today, type_hint: Optional[str] = None) -> "str | IborAnswer":

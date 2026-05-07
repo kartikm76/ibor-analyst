@@ -1,7 +1,9 @@
 from __future__ import annotations
+import json
 from uuid import uuid4, UUID
 from datetime import date
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from ai_gateway.config.settings import settings
 from ai_gateway.model.schemas import (
     ChatRequest, IborAnswer, PnLRequest, PositionsRequest, PricesRequest, TradesRequest, QuotaStatus,
@@ -73,37 +75,31 @@ def make_analyst_router(
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    @router.post("/chat", response_model=IborAnswer)
-    async def chat(body: ChatRequest, request: Request) -> IborAnswer:
+    @router.post("/chat")
+    async def chat(body: ChatRequest, request: Request) -> StreamingResponse:
         try:
-            # Extract client IP (handle X-Forwarded-For for proxies)
             client_ip = request.client.host if request.client else "unknown"
             if x_forwarded := request.headers.get("X-Forwarded-For"):
                 client_ip = x_forwarded.split(",")[0].strip()
 
             portfolio_code = body.portfolio_code or "P-ALPHA"
             analyst_id = client_ip
-            # Use session_id sent by the browser (stable across questions in a session)
-            # Fall back to a new UUID only if the client didn't send one
             session_id = body.session_id or str(uuid4())
             market_contents = body.market_contents if body.market_contents is not None else True
 
-            # Check quota BEFORE processing (if quota service available)
+            # Quota check before streaming starts
             quota_status = None
             if quota_service:
                 quota_check = await quota_service.check_quota(client_ip)
                 quota_status = QuotaStatus(**quota_check)
-
-                # If quota exceeded, return early with error response
                 if quota_status.quota_exceeded:
-                    return IborAnswer(
-                        question=body.question,
-                        as_of=date.today(),
-                        summary=f"❌ Daily question limit reached ({quota_status.questions_limit} questions). Come back tomorrow at {quota_status.reset_time}",
-                        quota_status=quota_status
-                    )
+                    msg = f"❌ Daily question limit reached ({quota_status.questions_limit} questions). Come back tomorrow at {quota_status.reset_time}"
+                    async def quota_exceeded_stream():
+                        yield f"data: {json.dumps({'type': 'text', 'content': msg})}\n\n"
+                        yield f"data: {json.dumps({'type': 'done', 'summary': msg, 'data': {}, 'gaps': [], 'quota_status': quota_status.model_dump(mode='json')})}\n\n"
+                    return StreamingResponse(quota_exceeded_stream(), media_type="text/event-stream")
 
-            # Load or create conversation (if service is available)
+            # Conversation setup
             conversation_id = None
             if conversation_service:
                 conv = await conversation_service.get_or_create_conversation(
@@ -113,15 +109,13 @@ def make_analyst_router(
                     context_id=portfolio_code
                 )
                 conversation_id = conv["conversation_id"]
-
-                # Save analyst question to conversation
                 await conversation_service.save_message(
                     conversation_id=conversation_id,
                     role="analyst",
                     content=body.question
                 )
 
-            # Retrieve similar past conversations for context injection
+            # RAG retrieval
             prior_context = []
             if conversation_service:
                 prior_context = await conversation_service.search_similar_conversations(
@@ -133,28 +127,36 @@ def make_analyst_router(
                     min_similarity=settings.rag_min_similarity,
                 )
 
-            # Call LLM to generate response
-            response = await agent.chat(
-                question=body.question,
-                market_contents=market_contents,
-                prior_context=prior_context,
-            )
-
-            # Save AI response to conversation
-            if conversation_service and conversation_id:
-                await conversation_service.save_message(
-                    conversation_id=conversation_id,
-                    role="ai",
-                    content=response.summary or ""
-                )
-
-            # Attach quota status to response (always show remaining quota)
+            # Refresh quota after processing
             if quota_status is None and quota_service:
                 quota_check = await quota_service.check_quota(client_ip)
                 quota_status = QuotaStatus(**quota_check)
 
-            response.quota_status = quota_status
-            return response
+            quota_dict = quota_status.model_dump(mode='json') if quota_status else None
+            collected_summary = []
+
+            async def generate():
+                async for chunk in agent.chat_stream(
+                    question=body.question,
+                    market_contents=market_contents,
+                    prior_context=prior_context,
+                ):
+                    if chunk["type"] == "text":
+                        collected_summary.append(chunk["content"])
+                    elif chunk["type"] == "done":
+                        chunk["quota_status"] = quota_dict
+                    yield f"data: {json.dumps(chunk)}\n\n"
+
+                # Save AI response after stream completes
+                if conversation_service and conversation_id:
+                    await conversation_service.save_message(
+                        conversation_id=conversation_id,
+                        role="ai",
+                        content="".join(collected_summary)
+                    )
+
+            return StreamingResponse(generate(), media_type="text/event-stream")
+
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
