@@ -882,3 +882,70 @@ body {
 .ant-picker-input input { color: var(--text-1) !important; font-size: 13px !important; }
 .ant-select-selection-item { color: var(--text-1) !important; font-size: 13px !important; line-height: 30px !important; }
 .ant-picker-suffix svg { color: var(--text-3) !important; }
+
+/* ── Disclaimer modal ───────────────────────────────────────────────────── */
+.disclaimer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.disclaimer-modal {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-width: 540px;
+  width: 90%;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.disclaimer-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin: 0 0 20px 0;
+  letter-spacing: 0.02em;
+}
+
+.disclaimer-body p {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.6;
+  margin: 0 0 14px 0;
+}
+
+.disclaimer-body strong {
+  color: var(--text-1);
+}
+
+.disclaimer-fine {
+  font-size: 11px !important;
+  color: var(--text-3) !important;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 4px !important;
+}
+
+.disclaimer-btn {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 10px 0;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+
+.disclaimer-btn:hover {
+  opacity: 0.88;
+}

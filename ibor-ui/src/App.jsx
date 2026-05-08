@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import FilterBar from './components/FilterBar.jsx'
 import PortfolioSnapshot from './components/PortfolioSnapshot.jsx'
 import AiChat from './components/AiChat.jsx'
+import DisclaimerModal from './components/DisclaimerModal.jsx'
 import { fetchPositions, fetchPositionDetail } from './api/ibor.js'
 import { AgGridReact } from 'ag-grid-react'
 import axios from 'axios'
@@ -228,6 +229,7 @@ export default function App() {
 
   return (
     <div className="app-root">
+      <DisclaimerModal />
       <FilterBar
         asOf={asOf}
         portfolioCode={portfolioCode}
