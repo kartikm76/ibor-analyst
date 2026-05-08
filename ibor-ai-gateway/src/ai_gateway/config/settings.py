@@ -71,6 +71,9 @@ class Settings:
     banned_keywords: list[str]          = os.getenv("BANNED_KEYWORDS", "").split(",") if os.getenv("BANNED_KEYWORDS") else []
     log_all_requests: bool              = os.getenv("LOG_ALL_REQUESTS", "true").lower() == "true"
     alert_on_quota_violation: bool      = os.getenv("ALERT_ON_QUOTA_VIOLATION", "true").lower() == "true"
+    # Kill switch: set CHAT_ENABLED=false in Railway to block all chat immediately
+    chat_enabled: bool                  = os.getenv("CHAT_ENABLED", "true").lower() == "true"
+    chat_disabled_message: str          = os.getenv("CHAT_DISABLED_MESSAGE", "This demo is temporarily unavailable. Please check back later.")
 
 
 settings = Settings()

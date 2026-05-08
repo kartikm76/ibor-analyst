@@ -78,6 +78,13 @@ def make_analyst_router(
     @router.post("/chat")
     async def chat(body: ChatRequest, request: Request) -> StreamingResponse:
         try:
+            if not settings.chat_enabled:
+                msg = settings.chat_disabled_message
+                async def disabled_stream():
+                    yield f"data: {json.dumps({'type': 'text', 'content': msg})}\n\n"
+                    yield f"data: {json.dumps({'type': 'done', 'summary': msg, 'data': {}, 'gaps': []})}\n\n"
+                return StreamingResponse(disabled_stream(), media_type="text/event-stream")
+
             client_ip = request.client.host if request.client else "unknown"
             if x_forwarded := request.headers.get("X-Forwarded-For"):
                 client_ip = x_forwarded.split(",")[0].strip()
