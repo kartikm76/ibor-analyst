@@ -111,6 +111,11 @@ _OFF_TOPIC_MESSAGE = (
     "Try asking about your portfolio positions, P&L, trade history, or market context for your holdings."
 )
 
+_MARKET_DATA_OFF_MESSAGE = (
+    "That question requires live market data, but market data is currently turned off. "
+    "Enable 'Market data & sentiment' and ask again, or ask about your portfolio positions, P&L, or trade history."
+)
+
 # ---------------------------------------------------------------------------
 # Guardrail classifier
 # ---------------------------------------------------------------------------
@@ -319,8 +324,10 @@ class LlmService:
         if category == "reject":
             return IborAnswer(question=question, as_of=today, summary=_OFF_TOPIC_MESSAGE)
 
-        if category == "market_only" and market_contents:
-            return await self._handle_market_only(question, today)
+        if category == "market_only":
+            if market_contents:
+                return await self._handle_market_only(question, today)
+            return IborAnswer(question=question, as_of=today, summary=_MARKET_DATA_OFF_MESSAGE)
 
         # ── Step 1: intent parse ──────────────────────────────────────────
         plan = await self._parse_intent(question, today, market_contents)
@@ -402,7 +409,11 @@ class LlmService:
                 yield {"type": "done", "summary": _OFF_TOPIC_MESSAGE, "data": {}, "gaps": []}
                 return
 
-            if category == "market_only" and market_contents:
+            if category == "market_only":
+                if not market_contents:
+                    yield {"type": "text", "content": _MARKET_DATA_OFF_MESSAGE}
+                    yield {"type": "done", "summary": _MARKET_DATA_OFF_MESSAGE, "data": {}, "gaps": []}
+                    return
                 result = await self._handle_market_only(question, today)
                 yield {"type": "text", "content": result.summary or ""}
                 yield {"type": "done", "summary": result.summary, "data": result.data, "gaps": result.gaps}
