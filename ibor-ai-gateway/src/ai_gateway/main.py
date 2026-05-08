@@ -31,6 +31,7 @@ from ai_gateway.controller.health import router as health_router
 from ai_gateway.controller.analyst import make_analyst_router
 from ai_gateway.controller import conversation_test
 from ai_gateway.controller import scheduler_test
+from ai_gateway.controller.admin import router as admin_router
 from ai_gateway.infra.security_middleware import SecurityMiddleware, InputValidationMiddleware, QuotaCheckMiddleware
 
 
@@ -110,6 +111,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router, tags=["health"])
     app.include_router(make_analyst_router(service, llm_service, conversation_service, quota_service))
+    app.include_router(admin_router)
     app.include_router(conversation_test.router)
     app.include_router(scheduler_test.router)
 
