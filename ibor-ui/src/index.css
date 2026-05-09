@@ -949,3 +949,309 @@ body {
 .disclaimer-btn:hover {
   opacity: 0.88;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE LAYOUT  (< 768px)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.mobile-root {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;           /* dynamic viewport height — accounts for browser chrome */
+  overflow: hidden;
+  background: var(--bg-base);
+}
+
+/* ── Mobile header ──────────────────────────────────────────────────────── */
+.mobile-header {
+  height: 52px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mobile-brand-text {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.mobile-header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.mobile-portfolio-pill {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.15s;
+}
+
+.mobile-portfolio-pill:active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mobile-filter-caret {
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+.mobile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mobile-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+}
+
+.mobile-icon-btn:active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+.mobile-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Collapsible filter row ─────────────────────────────────────────────── */
+.mobile-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.mobile-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* ── Tab content area ───────────────────────────────────────────────────── */
+.mobile-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.mobile-tab-pane {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-tab-pane.active {
+  display: flex;
+}
+
+/* Scrollable content (Portfolio tab) */
+.mobile-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-surface) transparent;
+}
+
+/* Grid tabs */
+.mobile-grid-header {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mobile-grid-count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: auto;
+}
+
+.mobile-grid {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mobile-grid-hint {
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+  font-style: italic;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+
+.mobile-hint-text {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-3);
+  text-transform: none;
+  letter-spacing: 0;
+  font-style: italic;
+}
+
+.mobile-instrument-pill {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 2px 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: auto;
+}
+
+/* Chat tab — full height, no scroll wrapper needed */
+.mobile-chat-pane {
+  overflow: hidden;
+}
+
+/* ── Bottom tab bar ─────────────────────────────────────────────────────── */
+.mobile-tab-bar {
+  display: flex;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  /* Safe area for iPhone home indicator */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 58px;
+  position: relative;
+}
+
+.mobile-tab-btn:active {
+  background: var(--accent-dim);
+}
+
+.mobile-tab-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-tab-badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-card);
+}
+
+.mobile-tab-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: color 0.15s;
+}
+
+.mobile-tab-btn .mobile-tab-label {
+  color: var(--text-3);
+}
+
+.mobile-tab-btn.active .mobile-tab-label {
+  color: var(--accent);
+}
+
+/* Active tab indicator — thin line at top */
+.mobile-tab-btn.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 0 0 2px 2px;
+}

@@ -3,6 +3,8 @@ import FilterBar from './components/FilterBar.jsx'
 import PortfolioSnapshot from './components/PortfolioSnapshot.jsx'
 import AiChat from './components/AiChat.jsx'
 import DisclaimerModal from './components/DisclaimerModal.jsx'
+import MobileLayout from './components/MobileLayout.jsx'
+import { useIsMobile } from './hooks/useIsMobile.js'
 import { fetchPositions, fetchPositionDetail } from './api/ibor.js'
 import { AgGridReact } from 'ag-grid-react'
 import axios from 'axios'
@@ -116,6 +118,7 @@ const DEFAULT_AS_OF = new Date().toISOString().slice(0, 10)
 const DEFAULT_PORTFOLIO = 'P-ALPHA'
 
 export default function App() {
+  const isMobile = useIsMobile()
   const [theme, setTheme] = useState(() => localStorage.getItem('ibor-theme') || 'dark')
   const [asOf, setAsOf] = useState(DEFAULT_AS_OF)
   const [portfolioCode, setPortfolioCode] = useState(DEFAULT_PORTFOLIO)
@@ -225,6 +228,39 @@ export default function App() {
 
   function handleAiAnswer() {
     // Chat responses are informational only — never overwrite the grid data.
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        <DisclaimerModal />
+        <MobileLayout
+          theme={theme}
+          toggleTheme={toggleTheme}
+          asOf={asOf}
+          setAsOf={setAsOf}
+          portfolioCode={portfolioCode}
+          setPortfolioCode={setPortfolioCode}
+          handleSubmit={handleSubmit}
+          loading={loading}
+          positions={positions}
+          positionRows={positionRows}
+          transactionRows={transactionRows}
+          totalAum={totalAum}
+          snapDate={snapDate}
+          pnlDelta={pnlDelta}
+          selectedInstrument={selectedInstrument}
+          setSelectedInstrument={setSelectedInstrument}
+          loadingTxns={loadingTxns}
+          gridClass={gridClass}
+          defaultColDef={defaultColDef}
+          onPositionRowSelected={onPositionRowSelected}
+          handleAiAnswer={handleAiAnswer}
+          useContext={useContext}
+          setUseContext={setUseContext}
+        />
+      </>
+    )
   }
 
   return (

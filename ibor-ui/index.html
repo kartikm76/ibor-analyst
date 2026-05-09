@@ -2,8 +2,22 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>IBOR AI Analyst</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0a0a0a" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="IBOR" />
+
+    <!-- Prevent tap highlight on mobile -->
+    <style>
+      * { -webkit-tap-highlight-color: transparent; }
+    </style>
   </head>
   <body>
     <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('ibor-theme')||'dark')</script>
