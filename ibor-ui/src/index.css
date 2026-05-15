@@ -1255,3 +1255,576 @@ body {
   background: var(--accent);
   border-radius: 0 0 2px 2px;
 }
+
+/* ────────────────────────────────────────────────────────────────────────────── */
+/* Mobile App Layout (AppMobile) */
+/* ────────────────────────────────────────────────────────────────────────────── */
+
+.mobile-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-base);
+  padding-bottom: 70px;
+}
+
+/* Header */
+.mobile-header {
+  height: 56px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.mobile-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.mobile-header-filters {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.mobile-filter-caret {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.mobile-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mobile-header-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-1);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.mobile-header-btn:active {
+  background: var(--accent-dim);
+}
+
+.mobile-header-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Filter panel */
+.mobile-filter-panel {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.mobile-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobile-filter-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mobile-filter-field input,
+.mobile-filter-field select {
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-1);
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+}
+
+.mobile-filter-btn {
+  padding: 10px 16px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mobile-filter-btn:active {
+  opacity: 0.9;
+}
+
+.mobile-filter-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Main content area */
+.mobile-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Portfolio summary card */
+.mobile-summary-card {
+  padding: 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Positions section */
+.mobile-positions-section {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.mobile-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mobile-section-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.mobile-section-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+  background: var(--bg-card);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+/* Positions list */
+.mobile-positions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Position card */
+.mobile-position-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mobile-position-header {
+  width: 100%;
+  padding: 14px;
+  background: var(--bg-card);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mobile-position-header:active {
+  background: var(--bg-surface);
+}
+
+.mobile-position-header-left {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.mobile-position-name-ticker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-position-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-position-ticker {
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.mobile-position-header-right {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.mobile-position-value {
+  text-align: right;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-1);
+}
+
+.mobile-position-direction {
+  min-width: 50px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.mobile-position-caret {
+  display: flex;
+  align-items: center;
+  color: var(--text-3);
+  transition: transform 0.2s;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.mobile-position-caret.expanded {
+  transform: scaleY(-1);
+}
+
+/* Position details (expanded) */
+.mobile-position-details {
+  padding: 12px 14px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.mobile-detail-label {
+  color: var(--text-3);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.mobile-detail-value {
+  color: var(--text-1);
+  font-weight: 600;
+  text-align: right;
+  flex: 1;
+}
+
+.mobile-detail-action-btn {
+  margin-top: 4px;
+  padding: 10px 14px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mobile-detail-action-btn:active {
+  opacity: 0.9;
+}
+
+.mobile-detail-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Modals */
+.mobile-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 1000;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.mobile-modal-content {
+  width: 100%;
+  max-height: 80vh;
+  background: var(--bg-base);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUpContent 0.3s ease-out;
+}
+
+@keyframes slideUpContent {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.mobile-modal-header {
+  padding: 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.mobile-modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-modal-close {
+  width: 36px;
+  height: 36px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-1);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.mobile-modal-close:active {
+  background: var(--accent-dim);
+}
+
+.mobile-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.mobile-modal-body.mobile-chat-body {
+  padding: 0;
+}
+
+.mobile-trades-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+.mobile-trades-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-trade-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-trade-date-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-trade-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.mobile-trade-action {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.mobile-trade-qty-amount {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.mobile-trade-label {
+  color: var(--text-3);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.mobile-trade-value {
+  color: var(--text-1);
+  font-weight: 600;
+  text-align: right;
+  flex: 1;
+}
+
+.mobile-trade-broker {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.mobile-trade-notes {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 4px;
+  padding: 8px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+}
+
+/* Chat modal adjustments */
+.mobile-chat-modal {
+  max-height: 90vh;
+}
+
+.mobile-chat-button-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px 20px;
+  background: linear-gradient(to top, var(--bg-base), var(--bg-base) 70%, rgba(10,10,10,0));
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.mobile-chat-button {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mobile-chat-button:active {
+  opacity: 0.9;
+  transform: scale(0.98);
+}
+
+/* Loading & empty states */
+.mobile-loading,
+.mobile-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+.mobile-loading {
+  color: var(--text-2);
+}
