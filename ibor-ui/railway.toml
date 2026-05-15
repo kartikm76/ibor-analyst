@@ -8,3 +8,6 @@ restartPolicyMaxRetries = 3
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 startCommand = ""
+
+# Force fresh build trigger 2026-05-15 19:50 UTC
+buildTrigger = "mobile-view-deployment-20260515"
