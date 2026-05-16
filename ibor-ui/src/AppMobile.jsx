@@ -184,10 +184,14 @@ function TradesModal({ isOpen, onClose, trades, instrumentId, loading }) {
 }
 
 function ChatModal({ isOpen, onClose, positions, totalAum }) {
-  if (!isOpen) return null
-
+  // Keep mounted (never return null) so AiChat state — including in-flight
+  // streams — is preserved when the modal is closed and reopened.
   return (
-    <div className="mobile-modal-overlay" onClick={onClose}>
+    <div
+      className="mobile-modal-overlay"
+      onClick={onClose}
+      style={{ display: isOpen ? 'flex' : 'none' }}
+    >
       <div className="mobile-modal-content mobile-chat-modal" onClick={(e) => e.stopPropagation()}>
         <div className="mobile-modal-handle" onClick={onClose} />
         <div className="mobile-modal-header">
