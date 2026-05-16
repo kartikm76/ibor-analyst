@@ -125,15 +125,6 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
     const question = input.trim()
     if (!question || sending) return
 
-    // Optimistically decrement quota counter the moment the user sends —
-    // the backend captures quota before the question is processed so the
-    // done-chunk quota is always one behind.
-    setQuotaStatus(prev => prev && !prev.quota_exceeded ? {
-      ...prev,
-      questions_remaining: Math.max(0, prev.questions_remaining - 1),
-      questions_today: (prev.questions_today ?? 0) + 1,
-    } : prev)
-
     // Reject garbage input — must have at least MIN_VALID_WORDS real English words
     const words = question.split(/\s+/).filter(w => /^[a-zA-Z$]{2,}$/.test(w))
     if (words.length < MIN_VALID_WORDS) {
@@ -159,6 +150,13 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
     ])
     setInput('')
     setSending(true)
+
+    // Optimistically decrement quota — backend sends pre-request count in done chunk
+    setQuotaStatus(prev => prev && !prev.quota_exceeded ? {
+      ...prev,
+      questions_remaining: Math.max(0, prev.questions_remaining - 1),
+      questions_today: (prev.questions_today ?? 0) + 1,
+    } : prev)
 
     let streamedText = ''
 
