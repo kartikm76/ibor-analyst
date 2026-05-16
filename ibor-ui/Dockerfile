@@ -50,10 +50,22 @@ server {
     # DNS resolver read from /etc/resolv.conf at startup (resolves .railway.internal)
     resolver ${RESOLVER} valid=30s;
 
+    # Hashed assets: long cache, but return 404 (not index.html) if missing.
+    # This prevents the "MIME type text/html" error when browsers request stale hashes.
+    location /assets/ {
+        root /usr/share/nginx/html;
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
     location / {
         root /usr/share/nginx/html;
         index index.html;
         try_files $uri $uri/ /index.html;
+        # Prevent index.html caching so users always see the latest asset hashes
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
     }
 
     location /analyst/ {

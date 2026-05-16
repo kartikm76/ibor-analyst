@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import PortfolioSnapshot from './components/PortfolioSnapshot.jsx'
 import AiChat from './components/AiChat.jsx'
 import { fetchPositions, fetchPositionDetail } from './api/ibor.js'
 import axios from 'axios'
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-alpine.css'
+
+const TYPE_COLORS = {
+  EQUITY: '#4a9eff',
+  BOND:   '#2ecc71',
+  FUT:    '#f39c12',
+  OPT:    '#9b59b6',
+  FX:     '#1abc9c',
+  INDEX:  '#e74c3c',
+  OTHER:  '#7f8c8d',
+}
 
 const usdFmt = (v) =>
   v != null
@@ -13,6 +20,30 @@ const usdFmt = (v) =>
 
 const numFmt = (v) =>
   v != null ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(v) : ''
+
+const compactAum = (v) => {
+  if (v == null || isNaN(v)) return '$0'
+  if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
+  if (Math.abs(v) >= 1_000)     return `$${(v / 1_000).toFixed(1)}K`
+  return `$${Math.round(v)}`
+}
+
+function computeAssetMix(positions) {
+  const totals = {}
+  let grand = 0
+  for (const p of positions) {
+    const type = p.instrumentType || p.type || 'OTHER'
+    const mv = Math.abs(p.mktValue ?? p.marketValue ?? 0)
+    const mult = p.contractMultiplier ?? 1
+    const val = mult > 1 ? mv / mult : mv
+    totals[type] = (totals[type] || 0) + val
+    grand += val
+  }
+  if (grand === 0) return []
+  return Object.entries(totals)
+    .map(([type, amount]) => ({ type, amount, pct: (amount / grand) * 100 }))
+    .sort((a, b) => b.amount - a.amount)
+}
 
 const DEFAULT_AS_OF = new Date().toISOString().slice(0, 10)
 const DEFAULT_PORTFOLIO = 'P-ALPHA'
@@ -49,6 +80,13 @@ function PositionCard({ position, isExpanded, onToggle, onSelectTrades, loadingT
 
       {isExpanded && (
         <div className="mobile-position-details">
+          <button
+            className="mobile-position-details-close"
+            onClick={() => onToggle(position.instrumentId)}
+            aria-label="Close details"
+          >
+            ✕
+          </button>
           <div className="mobile-detail-row">
             <span className="mobile-detail-label">Type</span>
             <span className="mobile-detail-value">{position.instrumentType || '-'}</span>
@@ -91,9 +129,10 @@ function TradesModal({ isOpen, onClose, trades, instrumentId, loading }) {
   return (
     <div className="mobile-modal-overlay" onClick={onClose}>
       <div className="mobile-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="mobile-modal-handle" onClick={onClose} />
         <div className="mobile-modal-header">
           <h3>Trades — {instrumentId}</h3>
-          <button className="mobile-modal-close" onClick={onClose}>✕</button>
+          <button className="mobile-modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
         <div className="mobile-modal-body">
@@ -150,9 +189,10 @@ function ChatModal({ isOpen, onClose, positions, totalAum }) {
   return (
     <div className="mobile-modal-overlay" onClick={onClose}>
       <div className="mobile-modal-content mobile-chat-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="mobile-modal-handle" onClick={onClose} />
         <div className="mobile-modal-header">
-          <h3>AI Chat</h3>
-          <button className="mobile-modal-close" onClick={onClose}>✕</button>
+          <h3>Ask Me</h3>
+          <button className="mobile-modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <div className="mobile-modal-body mobile-chat-body">
           <AiChat
@@ -183,6 +223,7 @@ export default function AppMobile({ theme, toggleTheme }) {
   const [showChatModal, setShowChatModal] = useState(false)
   const [selectedInstrument, setSelectedInstrument] = useState(null)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [mixOpen, setMixOpen] = useState(false)
 
   const handleSubmit = useCallback(async () => {
     setLoading(true)
@@ -234,6 +275,8 @@ export default function AppMobile({ theme, toggleTheme }) {
   const positionList = useMemo(() => {
     return Array.isArray(positions) ? positions : []
   }, [positions])
+
+  const assetMix = useMemo(() => computeAssetMix(positionList), [positionList])
 
   const transactionList = useMemo(() => {
     return Array.isArray(transactions)
@@ -313,17 +356,53 @@ export default function AppMobile({ theme, toggleTheme }) {
 
       {/* Main content — scrollable area */}
       <div className="mobile-content">
-        {/* Portfolio summary card */}
-        <div className="mobile-summary-card">
-          <PortfolioSnapshot
-            positions={positionList}
-            totalAum={totalAum}
-            snapDate={snapDate}
-            asOf={asOf}
-            portfolioCode={portfolioCode}
-            loading={loading}
-            pnlDelta={pnlDelta}
-          />
+        {/* Compact summary bar */}
+        <div className="mobile-summary-compact">
+          <div className="mobile-summary-row">
+            <div className="mobile-summary-item">
+              <div className="mobile-summary-label">AUM</div>
+              <div className="mobile-summary-aum">{compactAum(totalAum)}</div>
+            </div>
+            <div className="mobile-summary-item mobile-summary-item-right">
+              <div className="mobile-summary-label">Daily P&L</div>
+              <div
+                className="mobile-summary-pnl"
+                style={{ color: pnlDelta == null ? 'var(--text-3)' : pnlDelta >= 0 ? 'var(--green)' : 'var(--red)' }}
+              >
+                {pnlDelta == null ? '—' : `${pnlDelta >= 0 ? '▲' : '▼'} ${compactAum(Math.abs(pnlDelta))}`}
+              </div>
+            </div>
+          </div>
+
+          {/* Horizontal asset mix bar */}
+          {assetMix.length > 0 && (
+            <button className="mobile-mix-toggle" onClick={() => setMixOpen(!mixOpen)}>
+              <div className="mobile-mix-stack">
+                {assetMix.map(({ type, pct }) => (
+                  <div
+                    key={type}
+                    className="mobile-mix-segment"
+                    style={{ width: `${pct}%`, background: TYPE_COLORS[type] || TYPE_COLORS.OTHER }}
+                    title={`${type} ${pct.toFixed(0)}%`}
+                  />
+                ))}
+              </div>
+              <span className="mobile-mix-caret">{mixOpen ? '▲' : '▼'}</span>
+            </button>
+          )}
+
+          {mixOpen && (
+            <div className="mobile-mix-detail">
+              {assetMix.map(({ type, amount, pct }) => (
+                <div key={type} className="mobile-mix-row">
+                  <span className="mobile-mix-dot" style={{ background: TYPE_COLORS[type] || TYPE_COLORS.OTHER }} />
+                  <span className="mobile-mix-name">{type}</span>
+                  <span className="mobile-mix-amount">{compactAum(amount)}</span>
+                  <span className="mobile-mix-pct">{pct.toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Positions list */}
@@ -346,7 +425,7 @@ export default function AppMobile({ theme, toggleTheme }) {
                   key={pos.instrumentId}
                   position={pos}
                   isExpanded={expandedPosition === pos.instrumentId}
-                  onToggle={setExpandedPosition}
+                  onToggle={(id) => setExpandedPosition((prev) => (prev === id ? null : id))}
                   onSelectTrades={handleSelectTrades}
                   loadingTrades={loadingTrades && selectedInstrument === pos.instrumentId}
                   hasTransactions={true}
@@ -366,7 +445,7 @@ export default function AppMobile({ theme, toggleTheme }) {
           className="mobile-chat-button"
           onClick={() => setShowChatModal(true)}
         >
-          💬 Ask AI
+          💬 Ask Me
         </button>
       </div>
 

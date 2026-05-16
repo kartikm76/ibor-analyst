@@ -75,6 +75,19 @@ def make_analyst_router(
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+    @router.get("/quota")
+    async def quota(request: Request) -> dict:
+        """Return current quota status for the caller without consuming a question.
+        Used by the UI on chat-modal open so the 'X of N questions remaining'
+        counter shows from the start, not only after the first question."""
+        if not quota_service:
+            return {"questions_today": 0, "questions_limit": 0, "questions_remaining": 0,
+                    "quota_exceeded": False, "reset_time": None}
+        client_ip = request.client.host if request.client else "unknown"
+        if x_forwarded := request.headers.get("X-Forwarded-For"):
+            client_ip = x_forwarded.split(",")[0].strip()
+        return await quota_service.check_quota(client_ip)
+
     @router.post("/chat")
     async def chat(body: ChatRequest, request: Request) -> StreamingResponse:
         try:

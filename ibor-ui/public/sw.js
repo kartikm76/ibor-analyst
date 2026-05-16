@@ -1,10 +1,7 @@
-const CACHE = 'ibor-v1'
-const STATIC = ['/', '/index.html']
+const CACHE = 'ibor-v2'
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting())
-  )
+  e.waitUntil(self.skipWaiting())
 })
 
 self.addEventListener('activate', e => {
@@ -17,14 +14,30 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
+  const isNavigation = e.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')
+  const isApi = url.pathname.startsWith('/api') || url.pathname.startsWith('/analyst')
 
-  // Always go network-first for API calls — never serve stale financial data from cache
-  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/analyst')) {
+  // API: always network, never cache (financial data must be fresh)
+  if (isApi) {
     e.respondWith(fetch(e.request))
     return
   }
 
-  // Cache-first for static assets (JS, CSS, fonts)
+  // HTML / navigation: network-first so users always get the latest asset hashes.
+  // Cache fallback only for offline use.
+  if (isNavigation) {
+    e.respondWith(
+      fetch(e.request).then(response => {
+        const clone = response.clone()
+        caches.open(CACHE).then(c => c.put(e.request, clone))
+        return response
+      }).catch(() => caches.match(e.request))
+    )
+    return
+  }
+
+  // Hashed static assets (JS/CSS with content hash in filename): cache-first is safe
+  // because the URL changes whenever content changes.
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached

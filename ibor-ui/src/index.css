@@ -1418,12 +1418,120 @@ body {
   flex-direction: column;
 }
 
-/* Portfolio summary card */
-.mobile-summary-card {
-  padding: 16px;
+/* Compact summary bar */
+.mobile-summary-compact {
+  padding: 12px 16px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.mobile-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-summary-item-right {
+  align-items: flex-end;
+}
+
+.mobile-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mobile-summary-aum {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--blue);
+  line-height: 1.1;
+}
+
+.mobile-summary-pnl {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.mobile-mix-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.mobile-mix-stack {
+  flex: 1;
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.mobile-mix-segment {
+  height: 100%;
+}
+
+.mobile-mix-caret {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.mobile-mix-detail {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobile-mix-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.mobile-mix-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.mobile-mix-name {
+  flex: 1;
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+.mobile-mix-amount {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.mobile-mix-pct {
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 32px;
+  text-align: right;
 }
 
 /* Positions section */
@@ -1555,12 +1663,38 @@ body {
 
 /* Position details (expanded) */
 .mobile-position-details {
-  padding: 12px 14px;
+  position: relative;
+  padding: 32px 14px 12px;
   background: var(--bg-surface);
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.mobile-position-details-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  padding: 0;
+}
+
+.mobile-position-details-close:active {
+  opacity: 0.85;
 }
 
 .mobile-detail-row {
@@ -1604,6 +1738,24 @@ body {
 .mobile-detail-action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.mobile-detail-collapse-btn {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+}
+
+.mobile-detail-collapse-btn:active {
+  background: var(--bg-surface);
 }
 
 /* Modals */
@@ -1672,19 +1824,39 @@ body {
 }
 
 .mobile-modal-close {
-  width: 36px;
-  height: 36px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-1);
-  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.15s;
   flex-shrink: 0;
+}
+
+/* Drag-handle pill at top of modal — visual cue that it can be dismissed */
+.mobile-modal-handle {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.mobile-modal-handle::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-3);
+  opacity: 0.4;
 }
 
 .mobile-modal-close:active {
@@ -1783,6 +1955,106 @@ body {
 /* Chat modal adjustments */
 .mobile-chat-modal {
   max-height: 90vh;
+  /* Account for iOS Safari bottom URL bar / home indicator */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Elevated navy surface to clearly distinguish chat from the black page */
+[data-theme="dark"] .mobile-chat-modal {
+  background: #1a2238;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(91, 163, 255, 0.25);
+}
+[data-theme="dark"] .mobile-chat-modal .mobile-modal-header {
+  background: #232d48;
+  border-bottom-color: rgba(91, 163, 255, 0.25);
+}
+[data-theme="dark"] .mobile-chat-modal .mobile-modal-body {
+  background: #1a2238;
+}
+[data-theme="dark"] .mobile-chat-modal .chat-input-area {
+  background: #1a2238;
+  border-top-color: rgba(91, 163, 255, 0.2);
+}
+/* Context checkbox & message bubble area also elevated */
+[data-theme="dark"] .mobile-chat-modal .context-checkbox,
+[data-theme="dark"] .mobile-chat-modal .chat-messages {
+  background: #1a2238;
+}
+
+[data-theme="light"] .mobile-chat-modal {
+  background: #eaf0fa;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08), 0 -1px 0 rgba(0, 102, 204, 0.18);
+}
+[data-theme="light"] .mobile-chat-modal .mobile-modal-header {
+  background: #d8e3f5;
+  border-bottom-color: rgba(0, 102, 204, 0.2);
+}
+[data-theme="light"] .mobile-chat-modal .mobile-modal-body {
+  background: #eaf0fa;
+}
+[data-theme="light"] .mobile-chat-modal .chat-input-area {
+  background: #eaf0fa;
+  border-top-color: rgba(0, 102, 204, 0.15);
+}
+
+/* Hide the redundant "IBOR Chat" header inside the modal — modal already has "AI Chat" header */
+.mobile-chat-body .chat-header {
+  display: none;
+}
+
+/* Compact AiChat layout inside the modal */
+.mobile-chat-body .chat-input-area {
+  padding: 12px 12px 16px;
+}
+
+.mobile-chat-body .chat-input-row {
+  gap: 8px;
+  align-items: stretch;
+}
+
+.mobile-chat-body .chat-input-field {
+  min-height: 56px;
+  max-height: 120px;
+  font-size: 16px; /* Prevents iOS auto-zoom on focus */
+  padding: 12px 14px;
+  background: #ffffff;
+  color: #0a0a0a;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 0 0 4px rgba(91, 163, 255, 0.12);
+}
+
+[data-theme="dark"] .mobile-chat-body .chat-input-field {
+  background: #1a1f2e;
+  color: #ffffff;
+  border-color: rgba(91, 163, 255, 0.6);
+}
+
+.mobile-chat-body .chat-input-field::placeholder {
+  color: var(--text-3);
+  opacity: 0.7;
+}
+
+.mobile-chat-body .chat-input-field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(91, 163, 255, 0.25);
+}
+
+.mobile-chat-body .chat-send-btn {
+  padding: 0 16px;
+  height: auto;
+  min-width: 64px;
+  align-self: stretch;
+}
+
+.mobile-chat-body .context-checkbox {
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.mobile-chat-body .chat-messages {
+  padding: 12px;
 }
 
 .mobile-chat-button-fixed {
@@ -1790,7 +2062,7 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 12px 16px 20px;
+  padding: 12px 16px calc(20px + env(safe-area-inset-bottom));
   background: linear-gradient(to top, var(--bg-base), var(--bg-base) 70%, rgba(10,10,10,0));
   flex-shrink: 0;
   z-index: 100;

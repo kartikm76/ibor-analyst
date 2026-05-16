@@ -110,6 +110,16 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
     textareaRef.current?.focus()
   }, [])
 
+  // Fetch quota status on mount so "X of N questions remaining" shows before the first ask
+  useEffect(() => {
+    let cancelled = false
+    fetch('/analyst/quota')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (!cancelled && data) setQuotaStatus(data) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
   async function handleSend() {
     const question = input.trim()
     if (!question || sending) return
@@ -282,9 +292,19 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={quotaStatus?.quota_exceeded ? "Daily limit reached" : "What do you want to know?"}
+            placeholder={quotaStatus?.quota_exceeded ? "Daily limit reached" : "Type your question…"}
             rows={2}
             disabled={sending || quotaStatus?.quota_exceeded}
+            autoComplete="off"
+            autoCorrect="on"
+            autoCapitalize="sentences"
+            spellCheck="true"
+            inputMode="text"
+            enterKeyHint="send"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
+            data-bwignore
           />
           <button
             className="chat-send-btn"
