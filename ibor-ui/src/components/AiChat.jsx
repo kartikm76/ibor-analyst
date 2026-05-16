@@ -96,7 +96,8 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
   ])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [marketContents, setMarketContents] = useState(true)  // Toggle for market data
+  const [marketContents, setMarketContents] = useState(true)
+  const [mode, setMode] = useState(() => localStorage.getItem('ibor-chat-mode') || 'detailed')
   const [quotaStatus, setQuotaStatus] = useState(null)
   const bottomRef = useRef(null)
   const textareaRef = useRef(null)
@@ -161,6 +162,7 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
           portfolio_code: 'P-ALPHA',
           market_contents: marketContents,
           session_id: SESSION_ID,
+          mode,
         }),
       })
 
@@ -265,6 +267,20 @@ export default function AiChat({ onAnswer, useContext, onContextChange, position
           />
           <span>Market data & sentiment</span>
         </label>
+        <div className="chat-mode-pill">
+          <button
+            className={`chat-mode-btn ${mode === 'brief' ? 'active' : ''}`}
+            onClick={() => { setMode('brief'); localStorage.setItem('ibor-chat-mode', 'brief') }}
+          >
+            Brief
+          </button>
+          <button
+            className={`chat-mode-btn ${mode === 'detailed' ? 'active' : ''}`}
+            onClick={() => { setMode('detailed'); localStorage.setItem('ibor-chat-mode', 'detailed') }}
+          >
+            Detailed
+          </button>
+        </div>
       </div>
 
       <div className="chat-messages">
