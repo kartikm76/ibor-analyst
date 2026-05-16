@@ -106,6 +106,7 @@ def make_analyst_router(
             analyst_id = client_ip
             session_id = body.session_id or str(uuid4())
             market_contents = body.market_contents if body.market_contents is not None else True
+            mode = body.mode if body.mode in ("brief", "detailed") else "detailed"
 
             # Quota check before streaming starts
             quota_status = None
@@ -160,6 +161,7 @@ def make_analyst_router(
                     question=body.question,
                     market_contents=market_contents,
                     prior_context=prior_context,
+                    mode=mode,
                 ):
                     if chunk["type"] == "text":
                         collected_summary.append(chunk["content"])

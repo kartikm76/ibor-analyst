@@ -507,6 +507,7 @@ body {
 .context-checkbox {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 10px 14px;
   margin: 12px 16px;
@@ -514,6 +515,47 @@ body {
   flex-shrink: 0;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+/* Brief / Detailed mode pill */
+.chat-mode-pill {
+  display: flex;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .chat-mode-pill {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.chat-mode-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: transparent;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.chat-mode-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+[data-theme="light"] .chat-mode-btn {
+  color: var(--text-2);
+}
+
+[data-theme="light"] .chat-mode-btn.active {
+  background: var(--accent);
+  color: #ffffff;
 }
 
 [data-theme="dark"] .context-checkbox {

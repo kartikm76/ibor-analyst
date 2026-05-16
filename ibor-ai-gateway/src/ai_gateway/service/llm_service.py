@@ -57,6 +57,7 @@ MARKET CONTEXT — live data from Yahoo Finance (prices, news, earnings, macro i
 Use this to add intelligence, not to contradict IBOR facts.
 
 Write a 4-8 sentence analyst-grade response that:
+0. Opens with ONE plain-English sentence (≤20 words, zero jargon) giving the core takeaway to any reader.
 1. Answers the question directly using IBOR facts (exact numbers, positions, dates).
 2. Layers in market context: current price movement, upcoming events, relevant news.
 3. Surfaces the key risk or opportunity the PM should be aware of.
@@ -80,6 +81,7 @@ IBOR DATA — your firm's investment book of record. These numbers are ground tr
 Use them exactly as given. Never estimate, round, or invent figures.
 
 Write a 4-8 sentence analyst-grade response that:
+0. Opens with ONE plain-English sentence (≤20 words, zero jargon) giving the core takeaway to any reader.
 1. Answers the question directly using IBOR facts (exact numbers, positions, dates).
 2. Analyzes the positions, composition, and risk factors visible in IBOR.
 3. Surfaces the key risk or opportunity the PM should be aware of.
@@ -92,6 +94,40 @@ Rules:
 - Flowing analyst prose — no bullet points, no headers.
 - Be direct and confident; the reader is a professional who manages money.
 - If analysis requires market context not available, mention it briefly then continue.
+- Today's date: {today}
+"""
+
+_SYNTHESIS_BRIEF_WITH_MARKET = """\
+You are a helpful investment assistant. Answer in plain, everyday language.
+
+You have IBOR portfolio data (exact numbers, ground truth) and live market context.
+
+Write exactly 2-3 sentences:
+1. State the key fact in plain English — what does this mean for the portfolio?
+2. Add one relevant market insight (price move, news, upcoming event).
+3. Give one simple, actionable takeaway.
+
+Rules:
+- No financial jargon, acronyms, or Greek letters unless specifically asked.
+- Use exact IBOR numbers but explain what they mean in plain terms.
+- A person with no finance background should fully understand your answer.
+- Today's date: {today}
+"""
+
+_SYNTHESIS_BRIEF_IBOR_ONLY = """\
+You are a helpful investment assistant. Answer in plain, everyday language.
+
+You have IBOR portfolio data only (exact numbers, ground truth).
+
+Write exactly 2-3 sentences:
+1. State the key fact in plain English — what does this mean for the portfolio?
+2. Add one relevant observation about the position or risk.
+3. Give one simple, actionable takeaway.
+
+Rules:
+- No financial jargon, acronyms, or Greek letters unless specifically asked.
+- Use exact IBOR numbers but explain what they mean in plain terms.
+- A person with no finance background should fully understand your answer.
 - Today's date: {today}
 """
 
@@ -381,7 +417,7 @@ class LlmService:
 
         return await self._synthesize(question, today, ibor_calls, ibor_results, market_context, market_contents, prior_context or [])
 
-    async def chat_stream(self, question: str, market_contents: bool = True, prior_context: list = None):
+    async def chat_stream(self, question: str, market_contents: bool = True, prior_context: list = None, mode: str = "detailed"):
         """Streaming variant of chat(). Yields SSE-ready dicts:
             {"type": "text",  "content": "<chunk>"}   — one per token
             {"type": "done",  "summary": "...", "data": {...}, "gaps": [...]}  — final
@@ -483,7 +519,10 @@ class LlmService:
                 ]
                 log.info("Injecting %d prior conversation(s) into synthesis context", len(prior_context))
 
-            synthesis_prompt = _SYNTHESIS_SYSTEM_WITH_MARKET if market_contents else _SYNTHESIS_SYSTEM_IBOR_ONLY
+            if mode == "brief":
+                synthesis_prompt = _SYNTHESIS_BRIEF_WITH_MARKET if market_contents else _SYNTHESIS_BRIEF_IBOR_ONLY
+            else:
+                synthesis_prompt = _SYNTHESIS_SYSTEM_WITH_MARKET if market_contents else _SYNTHESIS_SYSTEM_IBOR_ONLY
             full_text = ""
 
             async with self._anthropic.messages.stream(

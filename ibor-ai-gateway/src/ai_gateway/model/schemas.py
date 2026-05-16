@@ -69,6 +69,7 @@ class ChatRequest(BaseModel):
     as_of: Optional[date] = None
     market_contents: Optional[bool] = True
     session_id: Optional[str] = Field(default=None, description="Stable browser session UUID for conversation memory")
+    mode: Optional[str] = Field(default="detailed", description="Response style: 'detailed' (analyst-grade) or 'brief' (plain language, 2-3 sentences)")
 
     @field_validator("question")
     @classmethod
