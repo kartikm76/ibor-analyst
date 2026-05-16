@@ -1718,13 +1718,13 @@ body {
   position: absolute;
   top: 6px;
   right: 6px;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   background: var(--accent);
   border: none;
-  border-radius: 6px;
+  border-radius: 5px;
   color: #ffffff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
